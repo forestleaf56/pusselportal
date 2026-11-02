@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<html lang="sv" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Höstsudoku</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome för ikoner -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Nunito:wght@400;600;700&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        autumn: {
+                            bg: '#FDF6ED',
+                            card: '#FFFDF9',
+                            primary: '#C85A32',    <!-- Varm höstorange -->
+                            primaryHover: '#A84420',
+                            secondary: '#7A3E29',  <!-- Trä/Kastanjebrytning -->
+                            accent: '#D97724',     <!-- Gyllene löv -->
+                            leaf: '#556B2F',       <!-- Mossgrön -->
+                            grid: '#8C5A3E',       <!-- Rutnätslinjer -->
+                            selected: '#FFE5CD',   <!-- Markerad cell -->
+                            highlight: '#F9EFE4',  <!-- Samma rad/kolumn/box -->
+                            sameNum: '#FAD8B1',    <!-- Samma siffra -->
+                            error: '#E54B4B',      <!-- Fel siffra -->
+                            text: '#4A2E2B'
+                        }
+                    },
+                    fontFamily: {
+                        title: ['Fredoka', 'sans-serif'],
+                        body: ['Nunito', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Nunito', sans-serif;
+            background-color: #FDF6ED;
+            background-image: radial-gradient(#E8D5C4 1px, transparent 1px);
+            background-size: 20px 20px;
+            touch-action: manipulation;
+        }
+
+        /* Fallande löv-animation i bakgrunden */
+        .leaf {
+            position: fixed;
+            top: -10%;
+            pointer-events: none;
+            z-index: 0;
+            animation: fall linear infinite;
+        }
+
+        @keyframes fall {
+            0% {
+                transform: translateY(0) rotate(0deg) translateX(0);
+                opacity: 0.8;
+            }
+            50% {
+                transform: translateY(50vh) rotate(180deg) translateX(50px);
+            }
+            100% {
+                transform: translateY(105vh) rotate(360deg) translateX(-20px);
+                opacity: 0.2;
+            }
+        }
+
+        /* Rutnät styling för Sudoku */
+        .sudoku-cell {
+            aspect-ratio: 1;
+            user-select: none;
+            -webkit-user-select: none;
+            transition: background-color 0.15s ease, transform 0.1s ease;
+        }
+        
+        .sudoku-cell:active {
+            transform: scale(0.96);
+        }
+
+        /* Tjockare linjer för 3x3 block */
+        .border-r-thick { border-right-width: 3px; border-right-color: #7A3E29; }
+        .border-b-thick { border-bottom-width: 3px; border-bottom-color: #7A3E29; }
+        
+        /* Anteckningsnät i en cell */
+        .notes-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            grid-template-rows: repeat(3, 1fr);
+            width: 100%;
+            height: 100%;
+            font-size: 0.65rem;
+            line-height: 1;
+            color: #7A3E29;
+        }
+
+        @media (min-width: 640px) {
+            .notes-grid {
+                font-size: 0.85rem;
+            }
+        }
+    </style>
+</head>
+<body class="h-full text-autumn-text flex flex-col justify-between overflow-x-hidden select-none">
+
+    <!-- Fallande löv (bakgrundsdekoration) -->
+    <div id="leaves-container"></div>
+
+    <!-- Huvudbehållare -->
+    <div class="relative z-10 max-w-md w-full mx-auto px-3 py-2 flex flex-col h-full justify-between">
+        
+        <!-- Header / Meny -->
+        <header class="flex justify-between items-center py-2">
+            <div class="flex items-center gap-2">
+                <i class="fa-solid fa-leaf text-2xl text-autumn-primary"></i>
+                <h1 class="font-title text-2xl sm:text-3xl font-bold text-autumn-secondary tracking-wide">Höstsudoku</h1>
+            </div>
+            
+            <!-- Timer och Inställningar -->
+            <div class="flex items-center gap-3">
+                <div class="bg-autumn-card px-3 py-1 rounded-full shadow border border-autumn-accent/30 font-semibold text-sm flex items-center gap-1.5 text-autumn-secondary">
+                    <i class="fa-regular fa-clock text-autumn-primary"></i>
+                    <span id="timer">00:00</span>
+                </div>
+                <button id="btn-restart" class="w-8 h-8 rounded-full bg-autumn-card shadow border border-autumn-accent/30 flex items-center justify-center text-autumn-secondary active:scale-95 transition-transform" title="Starta om spel">
+                    <i class="fa-solid fa-rotate-right text-xs"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- Svårighetsgrad & Kontroller överst -->
+        <div class="flex justify-between items-center my-1 bg-autumn-card p-1.5 rounded-xl shadow-sm border border-autumn-accent/20">
+            <div class="flex gap-1">
+                <button data-diff="easy" class="diff-btn px-2.5 py-1 text-xs font-title rounded-lg font-semibold transition-colors bg-autumn-primary text-white">Lätt</button>
+                <button data-diff="medium" class="diff-btn px-2.5 py-1 text-xs font-title rounded-lg font-semibold transition-colors text-autumn-secondary hover:bg-autumn-highlight">Medel</button>
+                <button data-diff="hard" class="diff-btn px-2.5 py-1 text-xs font-title rounded-lg font-semibold transition-colors text-autumn-secondary hover:bg-autumn-highlight">Svår</button>
+            </div>
+            <div class="text-xs font-bold text-autumn-secondary pr-2 flex items-center gap-1">
+                <i class="fa-solid fa-heart text-autumn-error"></i>
+                <span id="mistakes-count">0/3</span>
+            </div>
+        </div>
+
+        <!-- Sudokubräde -->
+        <div class="my-auto py-1">
+            <div class="bg-autumn-secondary p-1 rounded-2xl shadow-xl">
+                <div id="sudoku-board" class="grid grid-cols-9 bg-autumn-card rounded-xl overflow-hidden border border-autumn-secondary">
+                    <!-- Celler genereras dynamic via JS -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Spelkontroller & Verktyg -->
+        <div class="space-y-2 mb-1">
+            <div class="grid grid-cols-4 gap-2">
+                <button id="btn-undo" class="flex flex-col items-center justify-center py-2 bg-autumn-card rounded-xl shadow border border-autumn-accent/20 text-autumn-secondary active:bg-autumn-highlight transition-all">
+                    <i class="fa-solid fa-rotate-left text-sm"></i>
+                    <span class="text-[10px] font-title font-semibold mt-0.5">Ångra</span>
+                </button>
+                <button id="btn-erase" class="flex flex-col items-center justify-center py-2 bg-autumn-card rounded-xl shadow border border-autumn-accent/20 text-autumn-secondary active:bg-autumn-highlight transition-all">
+                    <i class="fa-solid fa-eraser text-sm"></i>
+                    <span class="text-[10px] font-title font-semibold mt-0.5">Radera</span>
+                </button>
+                <button id="btn-notes" class="flex flex-col items-center justify-center py-2 bg-autumn-card rounded-xl shadow border border-autumn-accent/20 text-autumn-secondary active:bg-autumn-highlight transition-all relative">
+                    <i class="fa-solid fa-pencil text-sm"></i>
+                    <span class="text-[10px] font-title font-semibold mt-0.5">Anteckna</span>
+                    <span id="notes-badge" class="absolute top-1 right-2 text-[9px] bg-autumn-primary text-white font-bold px-1 rounded-full opacity-0 transition-opacity">PA</span>
+                </button>
+                <button id="btn-hint" class="flex flex-col items-center justify-center py-2 bg-autumn-card rounded-xl shadow border border-autumn-accent/20 text-autumn-secondary active:bg-autumn-highlight transition-all">
+                    <i class="fa-regular fa-lightbulb text-sm text-autumn-accent"></i>
+                    <span class="text-[10px] font-title font-semibold mt-0.5">Ledtråd</span>
+                </button>
+            </div>
+
+            <!-- Sifferknappar 1-9 -->
+            <div class="grid grid-cols-9 gap-1 sm:gap-1.5">
+                <button class="numpad-btn py-3 sm:py-3.5 bg-autumn-card rounded-xl text-lg sm:text-xl font-title font-bold text-autumn-secondary shadow border border-autumn-accent/20 active:bg-autumn-primary active:text-white transition-all flex items-center justify-center" data-val="1">1</button>
+                <button class="numpad-btn py-3 sm:py-3.5 bg-autumn-card rounded-xl text-lg sm:text-xl font-title font-bold text-autumn-secondary shadow border border-autumn-accent/20 active:bg-autumn-primary active:text-white transition-all flex items-center justify-center" data-val="2">2</button>
+                <button class="numpad-btn py-3 sm:py-3.5 bg-autumn-card rounded-xl text-lg sm:text-xl font-title font-bold text-autumn-secondary shadow border border-autumn-accent/20 active:bg-autumn-primary active:text-white transition-all flex items-center justify-center" data-val="3">3</button>
+                <button class="numpad-btn py-3 sm:py-3.5 bg-autumn-card rounded-xl text-lg sm:text-xl font-title font-bold text-autumn-secondary shadow border border-autumn-accent/20 active:bg-autumn-primary active:text-white transition-all flex items-center justify-center" data-val="4">4</button>
+                <button class="numpad-btn py-3 sm:py-3.5 bg-autumn-card rounded-xl text-lg sm:text-xl font-title font-bold text-autumn-secondary shadow border border-autumn-accent/20 active:bg-autumn-primary active:text-white transition-all flex items-center justify-center" data-val="5">5</button>
+                <button class="numpad-btn py-3 sm:py-3.5 bg-autumn-card rounded-xl text-lg sm:text-xl font-title font-bold text-autumn-secondary shadow border border-autumn-accent/20 active:bg-autumn-primary active:text-white transition-all flex items-center justify-center" data-val="6">6</button>
+                <button class="numpad-btn py-3 sm:py-3.5 bg-autumn-card rounded-xl text-lg sm:text-xl font-title font-bold text-autumn-secondary shadow border border-autumn-accent/20 active:bg-autumn-primary active:text-white transition-all flex items-center justify-center" data-val="7">7</button>
+                <button class="numpad-btn py-3 sm:py-3.5 bg-autumn-card rounded-xl text-lg sm:text-xl font-title font-bold text-autumn-secondary shadow border border-autumn-accent/20 active:bg-autumn-primary active:text-white transition-all flex items-center justify-center" data-val="8">8</button>
+                <button class="numpad-btn py-3 sm:py-3.5 bg-autumn-card rounded-xl text-lg sm:text-xl font-title font-bold text-autumn-secondary shadow border border-autumn-accent/20 active:bg-autumn-primary active:text-white transition-all flex items-center justify-center" data-val="9">9</button>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Modal för Vinst / Game Over -->
+    <div id="modal-overlay" class="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center hidden opacity-0 transition-opacity duration-300">
+        <div class="bg-autumn-card border-2 border-autumn-accent rounded-3xl p-6 m-4 max-w-sm w-full text-center shadow-2xl transform scale-95 transition-transform duration-300" id="modal-content">
+            <div id="modal-icon" class="text-5xl mb-3 text-autumn-primary">
+                <i class="fa-solid fa-trophy"></i>
+            </div>
+            <h2 id="modal-title" class="font-title text-2xl font-bold text-autumn-secondary mb-2">Grattis!</h2>
+            <p id="modal-desc" class="text-sm text-autumn-text mb-6">Du löste pusslet på en fantastisk tid!</p>
+            
+            <div class="bg-autumn-bg p-3 rounded-xl mb-6 flex justify-around text-center">
+                <div>
+                    <div class="text-xs text-autumn-secondary/70 font-semibold">TID</div>
+                    <div id="modal-time" class="font-title font-bold text-autumn-primary text-lg">02:45</div>
+                </div>
+                <div class="border-r border-autumn-accent/20"></div>
+                <div>
+                    <div class="text-xs text-autumn-secondary/70 font-semibold">SVÅRIGHETSGRAD</div>
+                    <div id="modal-diff" class="font-title font-bold text-autumn-primary text-lg">Lätt</div>
+                </div>
+            </div>
+
+            <button id="btn-modal-new" class="w-full py-3 bg-autumn-primary text-white font-title font-bold rounded-xl shadow-lg hover:bg-autumn-primaryHover active:scale-95 transition-all">
+                Nytt Pussel
+            </button>
+        </div>
+    </div>
+
+    <!-- JavaScript Logik -->
+    <script>
+        // --- DEKORATION: FALLANDE LÖV ---
+        function createLeaves() {
+            const container = document.getElementById('leaves-container');
+            const leafIcons = ['fa-leaf', 'fa-tree', 'fa-seedling'];
+            const colors = ['#C85A32', '#D97724', '#7A3E29', '#556B2F'];
+            
+            for (let i = 0; i < 12; i++) {
+                const leaf = document.createElement('i');
+                const randomIcon = leafIcons[Math.floor(Math.random() * leafIcons.length)];
+                leaf.className = `fa-solid ${randomIcon} leaf`;
+                leaf.style.left = `${Math.random() * 100}%`;
+                leaf.style.color = colors[Math.floor(Math.random() * colors.length)];
+                leaf.style.fontSize = `${Math.random() * 12 + 10}px`;
+                leaf.style.animationDuration = `${Math.random() * 10 + 8}s`;
+                leaf.style.animationDelay = `${Math.random() * 5}s`;
+                container.appendChild(leaf);
+            }
+        }
+
+        // --- SUDOKU SPELMOTOR & TILLSTÅND ---
+        let solution = [];
+        let initialBoard = [];
+        let currentBoard = [];
+        let notesBoard = [];
+        let moveHistory = [];
+        
+        let selectedCell = null; // {row, col}
+        let currentDifficulty = 'easy';
+        let mistakes = 0;
+        const maxMistakes = 3;
+        let isNotesMode = false;
+        
+        let timerInterval = null;
+        let secondsElapsed = 0;
+        let isGameOver = false;
+
+        // Starta spel när fönstret laddas
+        window.onload = function() {
+            createLeaves();
+            initGame('easy');
+            setupEventListeners();
+        };
+
+        // --- SUDOKU GENERERING ALGORITM ---
+        function generateSudoku(difficulty) {
+            // Skapa tom 9x9 matris
+            let board = Array(9).fill(0).map(() => Array(9).fill(0));
+            solveHelper(board);
+            solution = board.map(row => [...row]); // Spara full lösning
+
+            // Ta bort siffror baserat på svårighetsgrad
+            let holes = 30; // Lätt
+            if (difficulty === 'medium') holes = 42;
+            if (difficulty === 'hard') holes = 54;
+
+            let puzzle = board.map(row => [...row]);
+            let removed = 0;
+            while (removed < holes) {
+                let r = Math.floor(Math.random() * 9);
+                let c = Math.floor(Math.random() * 9);
+                if (puzzle[r][c] !== 0) {
+                    puzzle[r][c] = 0;
+                    removed++;
+                }
+            }
+            return puzzle;
+        }
+
+        function solveHelper(board) {
+            for (let r = 0; r < 9; r++) {
+                for (let c = 0; c < 9; c++) {
+                    if (board[r][c] === 0) {
+                        let nums = shuffle([1, 2, 3, 4, 5, 6, 7, 8, 9]);
+                        for (let num of nums) {
+                            if (isValid(board, r, c, num)) {
+                                board[r][c] = num;
+                                if (solveHelper(board)) return true;
+                                board[r][c] = 0;
+                            }
+                        }
+                        return false;
+                    }
+                }
+            }
+            return true;
+        }
+
+        function isValid(board, r, c, num) {
+            for (let i = 0; i < 9; i++) {
+                if (board[r][i] === num && i !== c) return false;
+                if (board[i][c] === num && i !== r) return false;
+                let boxR = 3 * Math.floor(r / 3) + Math.floor(i / 3);
+                let boxC = 3 * Math.floor(c / 3) + (i % 3);
+                if (board[boxR][boxC] === num && (boxR !== r || boxC !== c)) return false;
+            }
+            return true;
+        }
+
+        function shuffle(arr) {
+            return arr.sort(() => Math.random() - 0.5);
+        }
+
+        // --- INITIERA SPEL ---
+        function initGame(difficulty) {
+            currentDifficulty = difficulty;
+            initialBoard = generateSudoku(difficulty);
+            currentBoard = initialBoard.map(row => [...row]);
+            notesBoard = Array(9).fill(0).map(() => Array(9).fill(0).map(() => new Set()));
+            moveHistory = [];
+            selectedCell = null;
+            mistakes = 0;
+            isGameOver = false;
+
+            document.getElementById('mistakes-count').innerText = `${mistakes}/${maxMistakes}`;
+            
+            // Återställ timer
+            stopTimer();
+            secondsElapsed = 0;
+            updateTimerDisplay();
+            startTimer();
+
+            // Bygg brädet i HTML
+            renderBoard();
+            updateDiffButtonsUI();
+        }
+
+        // Rendera Sudoku-rutnätet
+        function renderBoard() {
+            const boardEl = document.getElementById('sudoku-board');
+            boardEl.innerHTML = '';
+
+            for (let r = 0; r < 9; r++) {
+                for (let c = 0; c < 9; c++) {
+                    const cell = document.createElement('div');
+                    
+                    // Klasser för bordesign och borders
+                    let classes = ['sudoku-cell', 'flex', 'items-center', 'justify-center', 'relative', 'cursor-pointer', 'border-r', 'border-b', 'border-autumn-secondary/20'];
+                    
+                    if (c === 2 || c === 5) classes.push('border-r-thick');
+                    if (r === 2 || r === 5) classes.push('border-b-thick');
+                    
+                    cell.className = classes.join(' ');
+                    cell.dataset.row = r;
+                    cell.dataset.col = c;
+
+                    cell.addEventListener('click', () => selectCell(r, c));
+                    boardEl.appendChild(cell);
+                }
+            }
+            updateBoardUI();
+        }
+
+        // Uppdatera cellers utseende och innehåll
+        function updateBoardUI() {
+            const cells = document.querySelectorAll('.sudoku-cell');
+            
+            cells.forEach(cell => {
+                const r = parseInt(cell.dataset.row);
+                const c = parseInt(cell.dataset.col);
+                const val = currentBoard[r][c];
+                const isInitial = initialBoard[r][c] !== 0;
+
+                // Återställ bakgrundsfärg
+                cell.className = cell.className.replace(/bg-\S+/g, '');
+                
+                // Beräkna färgmarkeringar (Highlighting)
+                let bgColor = 'bg-autumn-card';
+
+                if (selectedCell) {
+                    const selR = selectedCell.row;
+                    const selC = selectedCell.col;
+                    const selVal = currentBoard[selR][selC];
+
+                    const isSameBox = Math.floor(r / 3) === Math.floor(selR / 3) && Math.floor(c / 3) === Math.floor(selC / 3);
+                    const isSameRowOrCol = r === selR || c === selC;
+
+                    if (r === selR && c === selC) {
+                        bgColor = 'bg-autumn-selected';
+                    } else if (selVal !== 0 && val === selVal) {
+                        bgColor = 'bg-autumn-sameNum';
+                    } else if (isSameRowOrCol || isSameBox) {
+                        bgColor = 'bg-autumn-highlight';
+                    }
+                }
+
+                cell.classList.add(bgColor);
+
+                // Rensa innehåll
+                cell.innerHTML = '';
+
+                if (val !== 0) {
+                    // Siffra finns
+                    const numSpan = document.createElement('span');
+                    numSpan.className = `font-title font-bold text-lg sm:text-2xl ${
+                        isInitial ? 'text-autumn-secondary' : 'text-autumn-primary'
+                    }`;
+                    
+                    // Kontrollera om siffran är felaktig
+                    if (!isInitial && val !== solution[r][c]) {
+                        numSpan.classList.remove('text-autumn-primary');
+                        numSpan.classList.add('text-autumn-error');
+                    }
+
+                    numSpan.innerText = val;
+                    cell.appendChild(numSpan);
+                } else if (notesBoard[r][c].size > 0) {
+                    // Anteckningar (Pencil marks)
+                    const notesGrid = document.createElement('div');
+                    notesGrid.className = 'notes-grid';
+                    
+                    for (let n = 1; n <= 9; n++) {
+                        const noteCell = document.createElement('div');
+                        noteCell.className = 'flex items-center justify-center font-semibold';
+                        if (notesBoard[r][c].has(n)) {
+                            noteCell.innerText = n;
+                        }
+                        notesGrid.appendChild(noteCell);
+                    }
+                    cell.appendChild(notesGrid);
+                }
+            });
+        }
+
+        // --- ANVÄNDARINTERAKTIONER ---
+        function selectCell(r, c) {
+            if (isGameOver) return;
+            selectedCell = { row: r, col: c };
+            updateBoardUI();
+        }
+
+        function handleInput(num) {
+            if (!selectedCell || isGameOver) return;
+            const { row, col } = selectedCell;
+
+            // Kan inte ändra startvärden
+            if (initialBoard[row][col] !== 0) return;
+
+            // Om anteckningsläge är aktiverat
+            if (isNotesMode) {
+                if (currentBoard[row][col] !== 0) return; // Kan inte lägga anteckning på uppfylld cell
+                
+                // Spara för ångra-funktion
+                saveState();
+
+                if (notesBoard[row][col].has(num)) {
+                    notesBoard[row][col].delete(num);
+                } else {
+                    notesBoard[row][col].add(num);
+                }
+                updateBoardUI();
+                return;
+            }
+
+            // Vanligt inmatningsläge
+            if (currentBoard[row][col] === num) return; // Samma värde
+
+            saveState();
+
+            currentBoard[row][col] = num;
+            notesBoard[row][col].clear();
+
+            // Kontrollera om draget var ett misstag
+            if (num !== solution[row][col]) {
+                mistakes++;
+                document.getElementById('mistakes-count').innerText = `${mistakes}/${maxMistakes}`;
+                
+                // VIBRATION HAPTIK (om mobilen stöder det)
+                if (navigator.vibrate) navigator.vibrate(200);
+
+                if (mistakes >= maxMistakes) {
+                    endGame(false);
+                }
+            } else {
+                // Ta bort denna siffra från anteckningar i samma rad, kolumn och box
+                cleanNotes(row, col, num);
+            }
+
+            updateBoardUI();
+            checkWin();
+        }
+
+        function eraseCell() {
+            if (!selectedCell || isGameOver) return;
+            const { row, col } = selectedCell;
+            
+            if (initialBoard[row][col] !== 0) return;
+
+            if (currentBoard[row][col] !== 0 || notesBoard[row][col].size > 0) {
+                saveState();
+                currentBoard[row][col] = 0;
+                notesBoard[row][col].clear();
+                updateBoardUI();
+            }
+        }
+
+        function giveHint() {
+            if (!selectedCell || isGameOver) return;
+            const { row, col } = selectedCell;
+
+            if (initialBoard[row][col] !== 0 || currentBoard[row][col] === solution[row][col]) return;
+
+            saveState();
+            currentBoard[row][col] = solution[row][col];
+            notesBoard[row][col].clear();
+            cleanNotes(row, col, solution[row][col]);
+            
+            updateBoardUI();
+            checkWin();
+        }
+
+        function cleanNotes(r, c, num) {
+            for (let i = 0; i < 9; i++) {
+                notesBoard[r][i].delete(num);
+                notesBoard[i][c].delete(num);
+            }
+            let boxR = 3 * Math.floor(r / 3);
+            let boxC = 3 * Math.floor(c / 3);
+            for (let br = 0; br < 3; br++) {
+                for (let bc = 0; bc < 3; bc++) {
+                    notesBoard[boxR + br][boxC + bc].delete(num);
+                }
+            }
+        }
+
+        // --- ÅNGRA LOGIK ---
+        function saveState() {
+            // Spara en djup kopia av nuvarande tillstånd
+            const notesCopy = notesBoard.map(row => row.map(set => new Set(set)));
+            const boardCopy = currentBoard.map(row => [...row]);
+            moveHistory.push({ board: boardCopy, notes: notesCopy });
+            
+            if (moveHistory.length > 20) moveHistory.shift(); // Begränsa historik
+        }
+
+        function undo() {
+            if (moveHistory.length === 0 || isGameOver) return;
+            const lastState = moveHistory.pop();
+            currentBoard = lastState.board;
+            notesBoard = lastState.notes;
+            updateBoardUI();
+        }
+
+        // --- KONTROLLERA VINST ---
+        function checkWin() {
+            for (let r = 0; r < 9; r++) {
+                for (let c = 0; c < 9; c++) {
+                    if (currentBoard[r][c] !== solution[r][c]) {
+                        return false;
+                    }
+                }
+            }
+            endGame(true);
+            return true;
+        }
+
+        function endGame(won) {
+            isGameOver = true;
+            stopTimer();
+
+            const modal = document.getElementById('modal-overlay');
+            const modalContent = document.getElementById('modal-content');
+            const icon = document.getElementById('modal-icon');
+            const title = document.getElementById('modal-title');
+            const desc = document.getElementById('modal-desc');
+
+            const diffNames = { easy: 'Lätt', medium: 'Medel', hard: 'Svår' };
+
+            document.getElementById('modal-time').innerText = formatTime(secondsElapsed);
+            document.getElementById('modal-diff').innerText = diffNames[currentDifficulty];
+
+            if (won) {
+                icon.innerHTML = '<i class="fa-solid fa-trophy text-autumn-accent"></i>';
+                title.innerText = 'Underbart!';
+                desc.innerText = 'Du har löst höstpusslet utan problem!';
+            } else {
+                icon.innerHTML = '<i class="fa-solid fa-heart-crack text-autumn-error"></i>';
+                title.innerText = 'Spelet Slut';
+                desc.innerText = 'Du gjorde för många misstag. Försök igen!';
+            }
+
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                modalContent.classList.remove('scale-95');
+                modalContent.classList.add('scale-100');
+            }, 10);
+        }
+
+        function closeModal() {
+            const modal = document.getElementById('modal-overlay');
+            const modalContent = document.getElementById('modal-content');
+            
+            modal.classList.add('opacity-0');
+            modalContent.classList.remove('scale-100');
+            modalContent.classList.add('scale-95');
+
+            setTimeout(() => {
+                modal.classList.add('hidden');
+            }, 300);
+        }
+
+        // --- TIMER ---
+        function startTimer() {
+            timerInterval = setInterval(() => {
+                secondsElapsed++;
+                updateTimerDisplay();
+            }, 1000);
+        }
+
+        function stopTimer() {
+            clearInterval(timerInterval);
+        }
+
+        function updateTimerDisplay() {
+            document.getElementById('timer').innerText = formatTime(secondsElapsed);
+        }
+
+        function formatTime(sec) {
+            const m = Math.floor(sec / 60).toString().padStart(2, '0');
+            const s = (sec % 60).toString().padStart(2, '0');
+            return `${m}:${s}`;
+        }
+
+        // --- EVENT LISTENERS ---
+        function setupEventListeners() {
+            // Sifferknappar
+            document.querySelectorAll('.numpad-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const val = parseInt(btn.dataset.val);
+                    handleInput(val);
+                });
+            });
+
+            // Tangentbordsinmatning
+            window.addEventListener('keydown', (e) => {
+                if (isGameOver) return;
+                
+                if (e.key >= '1' && e.key <= '9') {
+                    handleInput(parseInt(e.key));
+                } else if (e.key === 'Backspace' || e.key === 'Delete') {
+                    eraseCell();
+                } else if (e.key === 'n' || e.key === 'N') {
+                    toggleNotesMode();
+                } else if (selectedCell) {
+                    // Pilnavigering
+                    let { row, col } = selectedCell;
+                    if (e.key === 'ArrowUp' && row > 0) row--;
+                    if (e.key === 'ArrowDown' && row < 8) row++;
+                    if (e.key === 'ArrowLeft' && col > 0) col--;
+                    if (e.key === 'ArrowRight' && col < 8) col++;
+                    selectCell(row, col);
+                }
+            });
+
+            // Verktygsknappar
+            document.getElementById('btn-undo').addEventListener('click', undo);
+            document.getElementById('btn-erase').addEventListener('click', eraseCell);
+            document.getElementById('btn-hint').addEventListener('click', giveHint);
+            
+            const notesBtn = document.getElementById('btn-notes');
+            notesBtn.addEventListener('click', toggleNotesMode);
+
+            function toggleNotesMode() {
+                isNotesMode = !isNotesMode;
+                const badge = document.getElementById('notes-badge');
+                if (isNotesMode) {
+                    notesBtn.classList.add('bg-autumn-selected', 'border-autumn-primary');
+                    badge.classList.remove('opacity-0');
+                } else {
+                    notesBtn.classList.remove('bg-autumn-selected', 'border-autumn-primary');
+                    badge.classList.add('opacity-0');
+                }
+            }
+
+            // Svårighetsgradsknappar
+            document.querySelectorAll('.diff-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const diff = e.target.dataset.diff;
+                    initGame(diff);
+                });
+            });
+
+            // Starta om knapp
+            document.getElementById('btn-restart').addEventListener('click', () => {
+                initGame(currentDifficulty);
+            });
+
+            // Modal knappar
+            document.getElementById('btn-modal-new').addEventListener('click', () => {
+                closeModal();
+                initGame(currentDifficulty);
+            });
+        }
+
+        function updateDiffButtonsUI() {
+            document.querySelectorAll('.diff-btn').forEach(btn => {
+                if (btn.dataset.diff === currentDifficulty) {
+                    btn.className = 'diff-btn px-2.5 py-1 text-xs font-title rounded-lg font-semibold transition-colors bg-autumn-primary text-white shadow-sm';
+                } else {
+                    btn.className = 'diff-btn px-2.5 py-1 text-xs font-title rounded-lg font-semibold transition-colors text-autumn-secondary hover:bg-autumn-highlight';
+                }
+            });
+        }
+    </script>
+</body>
+</html>

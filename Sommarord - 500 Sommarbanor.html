@@ -1,0 +1,1475 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Sommarord - 500 Banor Ordscramble</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Canvas Confetti för vinstfirande -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+  <!-- Google Fonts: Fredoka & Quicksand för lekfull sommarkänsla -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Quicksand:wght@500;700&display=swap" rel="stylesheet">
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            fredoka: ['Fredoka', 'sans-serif'],
+            quicksand: ['Quicksand', 'sans-serif'],
+          },
+          colors: {
+            sun: {
+              100: '#FEF3C7',
+              300: '#FCD34D',
+              400: '#FBBF24',
+              500: '#F59E0B',
+              600: '#D97706',
+            },
+            sea: {
+              100: '#E0F2FE',
+              300: '#7DD3FC',
+              400: '#38BDF8',
+              500: '#0EA5E9',
+              600: '#0284C7',
+              800: '#075985',
+            },
+            sand: {
+              100: '#FFFBEB',
+              200: '#FEF3C7',
+              300: '#FDE68A',
+            },
+            coral: {
+              400: '#FB7185',
+              500: '#F43F5E',
+              600: '#E11D48',
+            }
+          },
+          keyframes: {
+            bounceGentle: {
+              '0%, 100%': { transform: 'translateY(0)' },
+              '50%': { transform: 'translateY(-6px)' },
+            },
+            shake: {
+              '0%, 100%': { transform: 'translateX(0)' },
+              '20%, 60%': { transform: 'translateX(-6px)' },
+              '40%, 80%': { transform: 'translateX(6px)' },
+            },
+            pop: {
+              '0%': { transform: 'scale(0.8)', opacity: '0' },
+              '70%': { transform: 'scale(1.1)' },
+              '100%': { transform: 'scale(1)', opacity: '1' },
+            }
+          },
+          animation: {
+            'bounce-gentle': 'bounceGentle 3s ease-in-out infinite',
+            'shake': 'shake 0.4s ease-in-out',
+            'pop': 'pop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    body {
+      font-family: 'Quicksand', sans-serif;
+      touch-action: manipulation;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .title-font {
+      font-family: 'Fredoka', cursive;
+    }
+    /* Bakgrund med somrigt sol- & havsljus */
+    .bg-summer-sky {
+      background: radial-gradient(circle at 50% 10%, #FEF9C3 0%, #BAE6FD 45%, #38BDF8 95%);
+    }
+    /* Brickor med 3D-knappeffekt */
+    .tile-shadow {
+      box-shadow: 0 5px 0 #D97706, 0 10px 15px -3px rgba(0, 0, 0, 0.15);
+      transition: all 0.12s ease;
+    }
+    .tile-shadow:active {
+      transform: translateY(4px);
+      box-shadow: 0 1px 0 #D97706, 0 4px 6px -2px rgba(0, 0, 0, 0.15);
+    }
+    .slot-shadow {
+      box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.1);
+    }
+    /* Anpassad scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 8px;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(251, 191, 36, 0.7);
+      border-radius: 8px;
+    }
+  </style>
+</head>
+<body class="bg-summer-sky min-h-screen text-slate-800 flex flex-col justify-between overflow-x-hidden antialiased">
+
+  <!-- Sol och sommarpynt i bakgrunden -->
+  <div class="fixed top-2 right-4 text-6xl opacity-30 select-none pointer-events-none animate-bounce-gentle">☀️</div>
+  <div class="fixed bottom-4 left-3 text-5xl opacity-25 select-none pointer-events-none">🌴</div>
+  <div class="fixed bottom-10 right-6 text-4xl opacity-20 select-none pointer-events-none">🐚</div>
+
+  <!-- ÖVERSTA MENYRADEN / HEADER -->
+  <header class="w-full max-w-xl mx-auto px-4 pt-3 pb-2 flex items-center justify-between z-10">
+    <button id="btn-open-levels" class="flex items-center gap-1.5 bg-white/80 hover:bg-white backdrop-blur-md px-3.5 py-1.5 rounded-full shadow-sm border border-white/60 active:scale-95 transition font-bold text-sea-800 text-sm">
+      <span class="text-base">🗺️</span>
+      <span id="header-level-badge">Bana 1</span>
+    </button>
+
+    <div class="flex items-center gap-2">
+      <!-- Ljudeffekt Toggle -->
+      <button id="btn-toggle-sound" class="w-9 h-9 flex items-center justify-center bg-white/80 hover:bg-white backdrop-blur-md rounded-full shadow-sm border border-white/60 active:scale-95 transition text-base" title="Växla ljud">
+        <span id="sound-icon">🔊</span>
+      </button>
+
+      <!-- Poäng/Solmynt -->
+      <div class="flex items-center gap-1.5 bg-amber-400/90 text-amber-950 font-extrabold px-3.5 py-1.5 rounded-full shadow-md border border-amber-300">
+        <span class="text-lg">☀️</span>
+        <span id="header-coins" class="title-font text-base">50</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- HUVUDSPELYTA -->
+  <main class="w-full max-w-lg mx-auto flex-1 flex flex-col justify-center items-center px-4 py-2 z-10">
+
+    <!-- Kort med baninfo & ledtråd -->
+    <div class="w-full bg-white/85 backdrop-blur-md rounded-3xl p-4 sm:p-5 shadow-xl border border-white/80 mb-4 transition-all">
+      <div class="flex justify-between items-center mb-1">
+        <span id="category-badge" class="bg-sea-100 text-sea-800 text-xs uppercase tracking-wider font-bold px-3 py-1 rounded-full border border-sea-300">
+          Bad & Strand
+        </span>
+        <div class="flex items-center gap-1 text-amber-500 font-bold text-xs" id="level-stars">
+          ⭐ Banframsteg
+        </div>
+      </div>
+
+      <!-- Ledtråd för ordet -->
+      <div class="text-center my-3">
+        <p class="text-xs font-semibold text-slate-500 uppercase tracking-widest mb-1">Dagens ledtråd</p>
+        <h2 id="word-clue" class="text-lg sm:text-xl font-bold text-slate-800 min-h-[1.75rem] flex items-center justify-center">
+          Varmt vatten och vågor
+        </h2>
+      </div>
+
+      <!-- SVARSRUTOR (Bokstäver som spelaren valt) -->
+      <div class="mt-4 flex flex-col items-center">
+        <div id="target-slots-container" class="flex flex-wrap justify-center gap-1.5 sm:gap-2.5 min-h-[58px] py-1">
+          <!-- Dynamiskt fyllda platser -->
+        </div>
+      </div>
+    </div>
+
+    <!-- MEDDELANDE- / FEEDBACK-RUTA -->
+    <div id="feedback-msg" class="h-6 text-sm font-bold text-coral-600 transition-opacity duration-200 opacity-0 mb-1 text-center">
+      Inte helt rätt, försök igen!
+    </div>
+
+    <!-- BLANDADE BOKSTÄVER (KLICKBARA BRICKOR) -->
+    <div class="w-full mt-2 mb-4">
+      <div id="letters-pool" class="flex flex-wrap justify-center gap-2 sm:gap-3 p-2">
+        <!-- Bokstavsbrickor genereras här -->
+      </div>
+    </div>
+
+    <!-- KONTROLLKNAPPAR -->
+    <div class="flex flex-wrap items-center justify-center gap-2 sm:gap-3 w-full max-w-sm">
+      <!-- Blanda knapp -->
+      <button id="btn-shuffle" class="flex-1 py-2.5 px-3 bg-white/85 hover:bg-white text-slate-700 font-bold rounded-2xl border border-white shadow active:scale-95 transition flex items-center justify-center gap-1.5 text-sm">
+        <span>🔄</span> Blanda
+      </button>
+
+      <!-- Ångra / Ta bort knapp -->
+      <button id="btn-backspace" class="flex-1 py-2.5 px-3 bg-white/85 hover:bg-white text-slate-700 font-bold rounded-2xl border border-white shadow active:scale-95 transition flex items-center justify-center gap-1.5 text-sm">
+        <span>⌫</span> Ångra
+      </button>
+
+      <!-- Rensa allt -->
+      <button id="btn-clear" class="py-2.5 px-3 bg-white/85 hover:bg-white text-slate-700 font-bold rounded-2xl border border-white shadow active:scale-95 transition text-sm">
+        Rensa
+      </button>
+
+      <!-- Köp ledtråd knapp -->
+      <button id="btn-hint" class="flex-1 py-2.5 px-3 bg-gradient-to-r from-amber-400 to-yellow-400 hover:from-amber-500 hover:to-yellow-500 text-amber-950 font-bold rounded-2xl shadow-md border border-amber-300 active:scale-95 transition flex items-center justify-center gap-1 text-sm">
+        <span>💡</span> Ledtråd <span class="text-xs bg-amber-600/20 px-1.5 py-0.5 rounded-full font-extrabold">-15☀️</span>
+      </button>
+    </div>
+
+  </main>
+
+  <!-- FOOTER -->
+  <footer class="w-full text-center py-2 text-xs text-sky-900/60 font-semibold z-10">
+    Sommarord • 500 Unika Sommarbanor • Klicka eller skriv med tangentbordet!
+  </footer>
+
+  <!-- MODAL: BANVÄLJARE (500 BANOR) -->
+  <div id="modal-levels" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-3 hidden opacity-0 transition-opacity duration-200">
+    <div class="bg-white rounded-3xl w-full max-w-lg max-h-[85vh] flex flex-col shadow-2xl overflow-hidden border border-white">
+      <!-- Modal Header -->
+      <div class="bg-gradient-to-r from-sea-500 to-sea-600 text-white p-4 flex items-center justify-between shadow-sm">
+        <div>
+          <h3 class="text-xl font-bold title-font flex items-center gap-2">
+            <span>🗺️</span> Välj bana (1 - 500)
+          </h3>
+          <p class="text-xs text-sea-100 mt-0.5">Lås upp nya banor genom att spela</p>
+        </div>
+        <button id="btn-close-levels" class="w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center text-lg active:scale-90 transition">✕</button>
+      </div>
+
+      <!-- Snabbsök / Hoppa till bana -->
+      <div class="p-3 bg-slate-50 border-b border-slate-100 flex items-center gap-2">
+        <input id="input-jump-level" type="number" min="1" max="500" placeholder="Bana 1-500..." class="flex-1 px-3 py-1.5 text-sm rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-sea-400">
+        <button id="btn-jump-level" class="px-3 py-1.5 bg-sea-500 hover:bg-sea-600 text-white rounded-xl text-xs font-bold transition">Gå till</button>
+      </div>
+
+      <!-- Sidbläddring för kapitel (25 banor per sida) -->
+      <div class="px-4 py-2 bg-amber-50 flex items-center justify-between border-b border-amber-100 text-xs font-bold text-amber-900">
+        <button id="btn-prev-page" class="px-2 py-1 bg-white border border-amber-200 rounded-lg shadow-sm hover:bg-amber-100 active:scale-95 disabled:opacity-40">◀ Föregående</button>
+        <span id="page-indicator">Sida 1 / 20 (Bana 1 - 25)</span>
+        <button id="btn-next-page" class="px-2 py-1 bg-white border border-amber-200 rounded-lg shadow-sm hover:bg-amber-100 active:scale-95 disabled:opacity-40">Nästa ▶</button>
+      </div>
+
+      <!-- Banrutnät -->
+      <div id="levels-grid" class="p-4 grid grid-cols-5 gap-2.5 overflow-y-auto flex-1 max-h-[50vh]">
+        <!-- Skapas via JS -->
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: BANVINST & GRATTIS -->
+  <div id="modal-win" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden opacity-0 transition-opacity duration-300">
+    <div class="bg-white rounded-3xl w-full max-w-sm p-6 text-center shadow-2xl border-4 border-amber-300 animate-pop relative">
+      <div class="text-5xl mb-2 animate-bounce-gentle">🏖️🎉</div>
+      <h3 class="text-2xl font-bold title-font text-sea-800 mb-1">Strålande!</h3>
+      <p class="text-sm text-slate-600 mb-4">Du löste ordet:</p>
+
+      <div class="bg-amber-50 border-2 border-amber-200 rounded-2xl py-2 px-4 mb-4">
+        <span id="win-solved-word" class="text-2xl font-black title-font tracking-widest text-amber-600">SOLSTOL</span>
+      </div>
+
+      <!-- Belöning -->
+      <div class="flex items-center justify-center gap-2 mb-6">
+        <div class="bg-amber-100 text-amber-900 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1">
+          <span>☀️</span> +10 Solmynt
+        </div>
+        <div id="streak-badge" class="bg-coral-100 text-coral-800 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1">
+          <span>🔥</span> Streak: 1
+        </div>
+      </div>
+
+      <div class="flex flex-col gap-2">
+        <button id="btn-next-level" class="w-full py-3.5 bg-gradient-to-r from-amber-400 to-yellow-400 hover:from-amber-500 hover:to-yellow-500 text-amber-950 font-black rounded-2xl text-lg shadow-lg border-2 border-amber-300 active:scale-95 transition">
+          Nästa Bana ▶
+        </button>
+        <button id="btn-win-levels" class="py-2 text-sm text-slate-500 hover:text-slate-800 font-bold transition">
+          Välj en annan bana
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- JAVASCRIPT: LOGIK, ORDBANK (500 BANOR), LJUD OCH INTERAKTION -->
+  <script>
+    /* ==========================================================================
+       1. ORDBANK & 500 SOMMARBANOR PÅ SVENSKA
+       En stor samling med genuint somriga svenska ord av varierande längd (3-9 bokstäver)
+       som utökas metodiskt till exakt 500 unika och distinkta nivåer.
+       ========================================================================== */
+    const rawSummerThemes = [
+      {
+        cat: "Bad & Strand",
+        items: [
+          { w: "BAD", c: "Ett svalkande dopp" },
+          { w: "SOL", c: "Den skiner varmt på himlen" },
+          { w: "HAV", c: "Stort och salt vatten" },
+          { w: "VÅG", c: "Rullar in mot stranden" },
+          { w: "SAND", c: "Mjukt att gå barfota på" },
+          { w: "DOPP", c: "Snabb simtur i vattnet" },
+          { w: "DYK", c: "Hoppa i med huvudet först" },
+          { w: "STRAND", c: "Här lägger man badlakanet" },
+          { w: "BRYGGA", c: "Bra ställe att bada ifrån" },
+          { w: "BADRING", c: "Flytande ring med luft" },
+          { w: "SIMMA", c: "Ta sig fram i vattnet" },
+          { w: "KRABBA", c: "Kilar i sidled på botten" },
+          { w: "SNÄCKA", c: "Vacker klenod från havet" },
+          { w: "MANET", c: "Geléaktigt djur i havet" },
+          { w: "TÅNG", c: "Gröna växter på havsbotten" },
+          { w: "HANDDUK", c: "Torkar kroppen efter badet" },
+          { w: "BIKINI", c: "Tvådelad baddräkt" },
+          { w: "BADBYXA", c: "Plagg för strandlekar" },
+          { w: "SOLKRÄM", c: "Skyddar mot brännande strålar" },
+          { w: "SOLSTOL", c: "Skönt att vila i på stranden" },
+          { w: "SNORKEL", c: "Andningsrör under ytan" },
+          { w: "DYKMASK", c: "Gör att du ser under vattnet" },
+          { w: "VATTEN", c: "Det bästa att svalka sig i" },
+          { w: "DYNING", c: "Mjuka rullande havsvågor" },
+          { w: "PARASOLL", c: "Ger skön skugga på stranden" },
+          { w: "FLYTLEK", c: "Roliga lekar i böljan" },
+          { w: "SANDSLOTT", c: "Byggs med hink och spade" },
+          { w: "BADVIK", c: "Lugn vik med skön strand" },
+          { w: "SIMFÖTTER", c: "Ger extra fart vid snorkling" },
+          { w: "KLIPPA", c: "Härligt varm att sola på" }
+        ]
+      },
+      {
+        cat: "Glass & Sommargott",
+        items: [
+          { w: "IS", c: "Kyler ner saften" },
+          { w: "BÄR", c: "Gott och sött i skogen" },
+          { w: "SAFT", c: "Kall dryck med bärsmak" },
+          { w: "PAJ", c: "Bakverk fyllt med rabarber" },
+          { w: "GLASS", c: "Sommarens favoritgodsak" },
+          { w: "PINNE", c: "Håller upp isglassen" },
+          { w: "STRUT", c: "Rån fyllt med kulglass" },
+          { w: "KULA", c: "Portion av god gräddglass" },
+          { w: "JORDGUBB", c: "Rött sött sommarbär" },
+          { w: "HALLON", c: "Rosa bär på buskar" },
+          { w: "BLÅBÄR", c: "Färgar tungan lila" },
+          { w: "SMULTRON", c: "Träs ofta på ett strå" },
+          { w: "RABARBER", c: "Sur stjälk till god paj" },
+          { w: "MELON", c: "Saftig och svalkande frukt" },
+          { w: "LEMONAD", c: "Läskande citrondryck" },
+          { w: "GRÄDDE", c: "Vispas till tårtan" },
+          { w: "TÅRTA", c: "Serveras på midsommar" },
+          { w: "SORBET", c: "Frisk och fruktig isglass" },
+          { w: "KÖRSBÄR", c: "Röda bär med kärnor i par" },
+          { w: "KRUSBÄR", c: "Gröna ludna bär i trädgården" },
+          { w: "VANILJ", c: "Klassisk smak på kulglass" },
+          { w: "CHOKLAD", c: "Mörk eller ljus glassmak" },
+          { w: "STRÖSSEL", c: "Färgglatt pynt på glassen" },
+          { w: "VÅFFLA", c: "Frasig med sylt och grädde" },
+          { w: "SUCKER", c: "Gör sommarsaften söt" },
+          { w: "FLÄDER", c: "Vita blommor ger god saft" },
+          { w: "MYSK", c: "Doft av sommarmogen frukt" },
+          { w: "KANELBULLE", c: "Fikans kung iBersån" },
+          { w: "KALLDRYCK", c: "Bästa törstsläckaren i värmen" },
+          { w: "ISLÄSK", c: "Kolsyrad kall dryck" }
+        ]
+      },
+      {
+        cat: "Sol & Sommarväder",
+        items: [
+          { w: "LJUS", c: "Långa ljusa nätter" },
+          { w: "VIND", c: "Mild bris i trädtopparna" },
+          { w: "REGN", c: "Svalkar efter hetta" },
+          { w: "VÄRME", c: "När termometern stiger" },
+          { w: "HETTA", c: "Gassande och kokhett" },
+          { w: "BRIS", c: "Skön och svalkande havsvind" },
+          { w: "SKUGGA", c: "Skönt under ett stort träd" },
+          { w: "ÅSKA", c: "Mullrar bland molnen" },
+          { w: "BLIXT", c: "Lysande sken vid oväder" },
+          { w: "SOLSKEN", c: "När det inte finns moln" },
+          { w: "HÖGSOMMAR", c: "När sommaren är som varmast" },
+          { w: "DAGGDROPPE", c: "Gnistrar på gräset i gryningen" },
+          { w: "SOLNEDGÅNG", c: "Himmelen färgas röd på kvällen" },
+          { w: "KVÄLLSBRIS", c: "Svalkar efter en varm dag" },
+          { w: "SOMMARNATT", c: "Ljusa timmar utan mörker" },
+          { w: "SOLGLIMT", c: "Kort stund av solsken" },
+          { w: "TERMOMETER", c: "Visar hur många grader det är" },
+          { w: "MOLNFRITT", c: "Klarblå himmel hela dagen" },
+          { w: "SOLSTICK", c: "Får man om man solar för länge" },
+          { w: "SOMMARVIND", c: "Ljummen vind genom fönstret" }
+        ]
+      },
+      {
+        cat: "Natur, Blommor & Trädgård",
+        items: [
+          { w: "EK", c: "Mäktigt träd i hagen" },
+          { w: "ROS", c: "Vacker blomma med taggar" },
+          { w: "ÄNG", c: "Full med vilda sommarblommor" },
+          { w: "GRÄS", c: "Grönt och doftar ljuvligt nyslaget" },
+          { w: "LÖV", c: "Prasslar grönt i vinden" },
+          { w: "MOSSE", c: "Våtmark där hjortron växer" },
+          { w: "LILJA", c: "Ståtlig vit sommarblomma" },
+          { w: "VALLMO", c: "Röd blomma i rågåkern" },
+          { w: "KLÖVER", c: "Sök efter en med fyra blad" },
+          { w: "SYREN", c: "Lila doftande försommarbuske" },
+          { w: "BLOMMA", c: "Färgglad växt på ängen" },
+          { w: "KRANS", c: "Bindes till midsommarafton" },
+          { w: "BJÖRK", c: "Träd med vit näver och gröna löv" },
+          { w: "BLÅKLOCKA", c: "Blå ängsblomma som ringer in sommaren" },
+          { w: "PRÄSTKRAGE", c: "Älskar, älskar inte..." },
+          { w: "SMÖRBLOMMA", c: "Lysande gul under hakan" },
+          { w: "LUPIN", c: "Höga lila och rosa spiror vid vägen" },
+          { w: "HÄGG", c: "Blommar intensivt mellan vår och sommar" },
+          { w: "GRÄSMATTA", c: "Klipps ofta på sommaren" },
+          { w: "RABATT", c: "Plantering med fina perenner" },
+          { w: "VATTNA", c: "Ge törstiga växter vatten" },
+          { w: "HÄCK", c: "Grön vägg runt tomten" },
+          { w: "KNOLL", c: "Liten kulle med blomster" },
+          { w: "TRÄDGÅRD", c: "Plats för odling och avkoppling" }
+        ]
+      },
+      {
+        cat: "Båt & Skärgård",
+        items: [
+          { w: "Ö", c: "Land omgivet av vatten" },
+          { w: "EKA", c: "Liten träbåt vid bryggan" },
+          { w: "RO", c: "Driva båten fram med åror" },
+          { w: "BÅT", c: "Farkost på glittrande vatten" },
+          { w: "SEGEL", c: "Fångar vinden på masten" },
+          { w: "ÅRA", c: "Verktyg för att ro ekan" },
+          { w: "SKÄR", c: "Klippö långt ut i havet" },
+          { w: "VIK", c: "Skyddad bukt vid kusten" },
+          { w: "ANKARE", c: "Håller båten stilla på svaj" },
+          { w: "KOBBE", c: "Liten stenig skärgårdsö" },
+          { w: "KAPARE", c: "Seglare på vida vatten" },
+          { w: "FYRTÅRN", c: "Blinkar och vägleder sjöfarare" },
+          { w: "MOTORBÅT", c: "Båt med brummande motor" },
+          { w: "KAJAK", c: "Paddlas nära vattenytan" },
+          { w: "KANOT", c: "Perfekt för åar och sjöar" },
+          { w: "PADDEL", c: "Hålls i händerna i kanoten" },
+          { w: "FLYTVÄST", c: "Viktig säkerhet till sjöss" },
+          { w: "FARLED", c: "Märkt väg för båtar på havet" },
+          { w: "HAMN", c: "Här lägger båtar till" },
+          { w: "SKÄRGÅRD", c: "Tusentals öar i glittrande vatten" },
+          { w: "KOMPASS", c: "Visar vägen mot norr" },
+          { w: "SÖDRA", c: "Vindriktning mot varmare breddgrader" },
+          { w: "RORGÄNGARE", c: "Den som styr skeppet" },
+          { w: "TAMP", c: "Rep som förtöjer båten" }
+        ]
+      },
+      {
+        cat: "Sommarstuga & Grill",
+        items: [
+          { w: "KOL", c: "Tänds under grillgallret" },
+          { w: "GLÖD", c: "Perfekt värme för grillning" },
+          { w: "MAT", c: "Smakar bäst utomhus" },
+          { w: "VED", c: "Värmer bastun på kvällen" },
+          { w: "GRILL", c: "Här lagas sommarens burgare" },
+          { w: "STUGA", c: "Det röda torpet med vita knutar" },
+          { w: "TORP", c: "Liten sommaridyll på landet" },
+          { w: "BASTU", c: "Svettigt och skönt innan dopp" },
+          { w: "ALTAN", c: "Trädäck för långa sommarmiddagar" },
+          { w: "VERANDA", c: "Plats med tak för morgonkaffet" },
+          { w: "KORV", c: "Grillas ofta på spett över elden" },
+          { w: "MAJSKOLV", c: "God och gul att grilla med smör" },
+          { w: "MARINAD", c: "Ger grillmaten god kryddsmak" },
+          { w: "HÄNGMATTA", c: "Bästa platsen för en tupplur" },
+          { w: "TÄLT", c: "Boende under stjärnklar himmel" },
+          { w: "SOVSÄCK", c: "Kryp ner i på campingnatten" },
+          { w: "PICKNICK", c: "Måltid på en filt i gröngräset" },
+          { w: "KORVBRÖD", c: "Mjukt bröd till grillkorven" },
+          { w: "KOLGRILL", c: "Klassisk doft av sommarkväll" },
+          { w: "FICKLAMPA", c: "Lyser upp vägen till utedasset" },
+          { w: "DISKA", c: "Görs ofta i balja på landet" }
+        ]
+      },
+      {
+        cat: "Aktiviteter & Spel",
+        items: [
+          { w: "LEK", c: "Roligt för stora och små" },
+          { w: "HOPP", c: "Från brygga eller studsmatta" },
+          { w: "KUBB", c: "Populärt grässpel med träpinnar" },
+          { w: "BOLL", c: "Kastas och sparkas på ängen" },
+          { w: "CYKEL", c: "Härligt färdmedel till badsjön" },
+          { w: "KROCKE", c: "Slå klot genom metallbågar" },
+          { w: "FRISBEE", c: "Plasttallrik som seglar i luften" },
+          { w: "FISKA", c: "Sitt still och titta på flötet" },
+          { w: "METSPÖ", c: "Långt spö med lina och krok" },
+          { w: "FLÖTE", c: "Gungar rött och vitt på ytan" },
+          { w: "MASK", c: "Kryper i jorden och sätts på kroken" },
+          { w: "ABBORRE", c: "Randig fisk med röda fenor" },
+          { w: "GÄDDA", c: "Vass tandrad i sjövassen" },
+          { w: "VANDRA", c: "Gå på upptäcktsfärd i naturen" },
+          { w: "FOTBOLL", c: "Match på sommarängens gräs" },
+          { w: "FÄSTING", c: "Litet kryp man kollar efter i skogen" },
+          { w: "DANS", c: "Runt stången med grodorna" },
+          { w: "FIKA", c: "Kaffe och bulle i bersån" },
+          { w: "SIMSKOLA", c: "Här lär man sig simma bröstsim" },
+          { w: "STUDSA", c: "Hoppa högt på studsmattan" }
+        ]
+      },
+      {
+        cat: "Sommarens Kryp & Djur",
+        items: [
+          { w: "MYRA", c: "Flitig byggare i skogsstacken" },
+          { w: "BI", c: "Surrar och samlar söt nektar" },
+          { w: "HUMLE", c: "Tjock och luden sommarsurrare" },
+          { w: "GETING", c: "Gulsvart randig och gillar saft" },
+          { w: "MYGGA", c: "Surrar vid örat på kvällen" },
+          { w: "FJÄRIL", c: "Fladdrar med färgglada vingar" },
+          { w: "NYCKELPIGA", c: "Röd med svarta prickar på ryggen" },
+          { w: "TROLLSLÄNDA", c: "Glittrande flygare över dammen" },
+          { w: "SVALA", c: "Bygger bo under takåsen och flyger lågt" },
+          { w: "MÅS", c: "Skriker vitt över fiskebåtarna" },
+          { w: "GRODA", c: "Hoppar grönt i vassen" },
+          { w: "PADDLA", c: "Ta årtagen framåt" },
+          { w: "IGELKOTT", c: "Taggig nattvandrare i trädgården" },
+          { w: "HARUNGE", c: "Skuttar försiktigt i daggigt gräs" },
+          { w: "GÖK", c: "Kokoar i skogen från väster eller öster" },
+          { w: "SKALBAGGE", c: "Glänsande sköld på skogsstigen" }
+        ]
+      },
+      {
+        cat: "Semester & Midsommar",
+        items: [
+          { w: "JUNI", c: "Månaden då sommaren börjar" },
+          { w: "JULI", c: "Den varmaste semestermånaden" },
+          { w: "AUGUSTI", c: "Kräftskivornas och stjärnornas tid" },
+          { w: "LEDIG", c: "Ingen skola och inget jobb" },
+          { w: "RESA", c: "Upptäcka nya smultronställen" },
+          { w: "VILA", c: "Att sova ut på morgonen" },
+          { w: "LUGN", c: "Tystnad och ro vid sjön" },
+          { w: "FEST", c: "Firande med vänner och god mat" },
+          { w: "STÅNG", c: "Kläs med björklöv och blommor" },
+          { w: "SILL", c: "Klassiker på midsommarbordet" },
+          { w: "PÄRON", c: "Söt frukt från trädgårdsträdet" },
+          { w: "POTATIS", c: "Färsk med dill och en klick smör" },
+          { w: "DILL", c: "Grön krydda till nypotatisen" },
+          { w: "GRÄSLÖK", c: "Klipps över gräddfilen" },
+          { w: "KRÄFTA", c: "Röd delikatess i sensommaren" },
+          { w: "KNYTKALAS", c: "Alla tar med sig något gott" },
+          { w: "SOMMARLOV", c: "Lång ledighet för alla skolbarn" },
+          { w: "SEMESTER", c: "Välförtjänt ledighet från jobbet" },
+          { w: "RESLUST", c: "Längtan efter nya äventyr" },
+          { w: "SMULTRONSTÄLLE", c: "En egen hemlig favoritplats" }
+        ]
+      }
+    ];
+
+    // Skapa en garanterad lista på exakt 500 unika banor
+    function generate500Levels() {
+      const levels = [];
+      const seenWords = new Set();
+
+      // Först: Lägg in alla unika ord från temalistan
+      rawSummerThemes.forEach(theme => {
+        theme.items.forEach(item => {
+          const cleanWord = item.w.trim().toUpperCase();
+          if (!seenWords.has(cleanWord) && cleanWord.length >= 3) {
+            seenWords.add(cleanWord);
+            levels.push({
+              level: levels.length + 1,
+              word: cleanWord,
+              clue: item.c,
+              category: theme.cat
+            });
+          }
+        });
+      });
+
+      // Extra rik vokabulär för att garantera hela 500 nivåer
+      const extraSummerVocabulary = [
+        // 3-4 bokstäver
+        { w: "DAG", c: "Lång och solig", cat: "Sol & Sommarväder" },
+        { w: "SÖT", c: "Smaken av solvarm bär", cat: "Glass & Sommargott" },
+        { w: "BÅL", c: "Läskande dryck i skål", cat: "Glass & Sommargott" },
+        { w: "ÖAR", c: "Många i vår skärgård", cat: "Båt & Skärgård" },
+        { w: "NÄT", c: "Fångar abborrar i sjön", cat: "Aktiviteter & Spel" },
+        { w: "METE", c: "Fiske med krok och mask", cat: "Aktiviteter & Spel" },
+        { w: "MYCKET", c: "Massor av glass!", cat: "Semester & Midsommar" },
+        { w: "VARM", c: "Sommarluften mitt på dagen", cat: "Sol & Sommarväder" },
+        { w: "LJUM", c: "Skön temperatur i vattnet", cat: "Bad & Strand" },
+        { w: "FLYT", c: "Hålla sig ovanför ytan", cat: "Bad & Strand" },
+        { w: "PLASK", c: "Ljudet när man hoppar i", cat: "Bad & Strand" },
+        { w: "HÄLL", c: "Flat solvarm stenhäll", cat: "Bad & Strand" },
+        { w: "SKUGG", c: "Sval plats under trädet", cat: "Sol & Sommarväder" },
+        { w: "BLÅST", c: "Friska vindar till sjöss", cat: "Båt & Skärgård" },
+        { w: "SVALK", c: "Skönt dopp efter hettan", cat: "Bad & Strand" },
+        { w: "RODD", c: "Träning med två åror", cat: "Båt & Skärgård" },
+        { w: "BÄCK", c: "Rinnande vatten i skogen", cat: "Natur & Blommor" },
+        { w: "SJÖ", c: "Lugnt sötvatten med näckrosor", cat: "Bad & Strand" },
+        { w: "GLAS", c: "Fylls med kall saft", cat: "Glass & Sommargott" },
+        { w: "MÅNE", c: "Lyser svagt i sommarnatten", cat: "Sol & Sommarväder" },
+        { w: "KÄRRA", c: "Rullar packningen till stranden", cat: "Semester & Midsommar" },
+        { w: "SKO", c: "Tas av för att gå barfota", cat: "Bad & Strand" },
+        { w: "SANDAL", c: "Luftigt på fötterna i värmen", cat: "Semester & Midsommar" },
+        { w: "FLIPFLOP", c: "Klassisk strandsandal", cat: "Bad & Strand" },
+        { w: "SVALKA", c: "Gör gott en riktig värmebölja", cat: "Sol & Sommarväder" },
+        { w: "BÖLJA", c: "Det blå havets rullning", cat: "Båt & Skärgård" },
+        { w: "GRÖNSKA", c: "Naturens färgrikedom i juni", cat: "Natur & Blommor" },
+        { w: "FÄGRING", c: "Sommarens ljuva blomning", cat: "Natur & Blommor" },
+        { w: "GLÄDJE", c: "Känslan av att vara ledig", cat: "Semester & Midsommar" },
+        { w: "SKRATT", c: "Hörs från bryggkanten", cat: "Semester & Midsommar" },
+        { w: "LEKPARK", c: "Skön plats för sommarbus", cat: "Aktiviteter & Spel" },
+        { w: "DYNA", c: "Mjuk kudde i trädgårdssoffan", cat: "Sommarstuga & Grill" },
+        { w: "GUNGSTOL", c: "Skön på verandan i solnedgången", cat: "Sommarstuga & Grill" },
+        { w: "LOV", c: "Skolans efterlängtade sommaruppehåll", cat: "Semester & Midsommar" },
+        { w: "VALL", c: "Grön äng med saftigt bete", cat: "Natur & Blommor" },
+        { w: "KOPP", c: "Morgonkaffe på trappen", cat: "Sommarstuga & Grill" },
+        { w: "BRUN", c: "Färgen huden får av solen", cat: "Bad & Strand" },
+        { w: "BRÄNNA", c: "Solen biter om man glömmer kräm", cat: "Bad & Strand" },
+        { w: "FÄRG", c: "Blommor i alla nyanser", cat: "Natur & Blommor" },
+        { w: "TÖRN", c: "Vildrosens lilla vassa tagg", cat: "Natur & Blommor" },
+        { w: "KLANG", c: "Ljud från kyrkklockor i fjärran", cat: "Semester & Midsommar" },
+        { w: "SKAL", c: "Skyddar kräftan och räkan", cat: "Glass & Sommargott" },
+        { w: "RÄKA", c: "Rosa och god med majonnäs", cat: "Glass & Sommargott" },
+        { w: "LAX", c: "God fisk på grillgallret", cat: "Sommarstuga & Grill" },
+        { w: "KORVSPETT", c: "Hålls över öppen lägereld", cat: "Sommarstuga & Grill" },
+        { w: "LÄGER", c: "Sova borta i naturen med vänner", cat: "Aktiviteter & Spel" },
+        { w: "KÅTA", c: "Traditionellt tält i fjällen", cat: "Aktiviteter & Spel" },
+        { w: "LED", c: "Upptrampad stig på fjället", cat: "Aktiviteter & Spel" },
+        { w: "FJÄLL", c: "Höga berg med snöfläckar", cat: "Aktiviteter & Spel" },
+        { w: "FORS", c: "Vilt strömmande vatten", cat: "Aktiviteter & Spel" },
+        { w: "BRO", c: "Förbinder öar i skärgården", cat: "Båt & Skärgård" },
+        { w: "SUND", c: "Smal vattenväg mellan två land", cat: "Båt & Skärgård" },
+        { w: "FJÄRD", c: "Öppen vattenyta i skärgården", cat: "Båt & Skärgård" },
+        { w: "GRUND", c: "Se upp med båtkölen här!", cat: "Båt & Skärgård" },
+        { w: "BÅTHUS", c: "Skyddar träbåten mot väder", cat: "Båt & Skärgård" },
+        { w: "SJÖBOD", c: "Rödmålad stuga vid hamnen", cat: "Båt & Skärgård" },
+        { w: "RÖKERI", c: "Här köper man nyrökt böckling", cat: "Glass & Sommargott" },
+        { w: "BÖCKLING", c: "Rökt strömming med stark doft", cat: "Glass & Sommargott" },
+        { w: "STRÖMMING", c: "Liten fisk i Östersjön", cat: "Båt & Skärgård" },
+        { w: "MÄRR", c: "Häst som betar i sommarhagen", cat: "Natur & Blommor" },
+        { w: "FÅLLE", c: "Galopperar i det gröna", cat: "Natur & Blommor" },
+        { w: "KALV", c: "Kors lilla unge på ängen", cat: "Natur & Blommor" },
+        { w: "LÄMME", c: "Fårets gulliga sommarunge", cat: "Natur & Blommor" },
+        { w: "FÅR", c: "Tuggar gräs och ger mjuk ull", cat: "Natur & Blommor" },
+        { w: "HAGE", c: "Inhägnad äng med gärdesgård", cat: "Natur & Blommor" },
+        { w: "GÄRDE", c: "Öppen odlad åkermark", cat: "Natur & Blommor" },
+        { w: "ÅKER", c: "Här mognar vete och korn", cat: "Natur & Blommor" },
+        { w: "RÅG", c: "Sädesslag med långa borst", cat: "Natur & Blommor" },
+        { w: "HAVRE", c: "Hästens favoritmat på fältet", cat: "Natur & Blommor" },
+        { w: "VETE", c: "Gyllene ax under augustisolen", cat: "Natur & Blommor" },
+        { w: "KORN", c: "Gult sädesslag på åkern", cat: "Natur & Blommor" },
+        { w: "NEKTAR", c: "Söt blomsaft som bin älskar", cat: "Sommarens Kryp & Djur" },
+        { w: "KUPA", c: "Binas hem där honung lagras", cat: "Sommarens Kryp & Djur" },
+        { w: "HONUNG", c: "Sött guld från sommarblommor", cat: "Glass & Sommargott" },
+        { w: "DRÖNARE", c: "Hanbi som inte har någon gadd", cat: "Sommarens Kryp & Djur" },
+        { w: "LARV", c: "Kryper på blad innan den blir fjäril", cat: "Sommarens Kryp & Djur" },
+        { w: "PUPPA", c: "Sover sött innan fjärilen vaknar", cat: "Sommarens Kryp & Djur" },
+        { w: "GULVINGE", c: "Somrig fjäril med ljusgula vingar", cat: "Sommarens Kryp & Djur" },
+        { w: "NÄSSLA", c: "Bränns på benen om man går nära", cat: "Natur & Blommor" },
+        { w: "MASKROS", c: "Gul som solen på gräsmattan", cat: "Natur & Blommor" },
+        { w: "TISTEL", c: "Vacker lila men vass blomma", cat: "Natur & Blommor" },
+        { w: "KÄRR", c: "Fuktig mark där älgen trivs", cat: "Natur & Blommor" },
+        { w: "LUND", c: "Lummig dunge med lövträd", cat: "Natur & Blommor" },
+        { w: "SKOG", c: "Full av granar, tallar och bär", cat: "Natur & Blommor" },
+        { w: "STIG", c: "Smal led att vandra på", cat: "Aktiviteter & Spel" },
+        { w: "ROT", c: "Man kan snubbla på den i skogen", cat: "Natur & Blommor" },
+        { w: "STUBBE", c: "Bra att sitta på och fika i skogen", cat: "Natur & Blommor" },
+        { w: "MÅNGLARE", c: "Säljer jordgubbar på torget", cat: "Semester & Midsommar" },
+        { w: "TORG", c: "Här köper man grönsaker och bär", cat: "Semester & Midsommar" },
+        { w: "LOPPIS", c: "Klassisk sommarjakt på gamla prylar", cat: "Aktiviteter & Spel" },
+        { w: "FYND", c: "Gör man på en mysig sommarmarknad", cat: "Aktiviteter & Spel" },
+        { w: "KORGMÖBEL", c: "Flätad stol att mysa i", cat: "Sommarstuga & Grill" },
+        { w: "KRUKKA", c: "Plantera pelargonier i på trappen", cat: "Natur & Blommor" },
+        { w: "PELARGON", c: "Röd stugblomma i fönsterkarmen", cat: "Natur & Blommor" },
+        { w: "BLOMPOTT", c: "Fin skål för sommarväxter", cat: "Natur & Blommor" },
+        { w: "KATT", c: "Ligger och spinner på solvarma altanen", cat: "Sommarens Kryp & Djur" },
+        { w: "HUND", c: "Badar glatt och skakar pälsen torr", cat: "Sommarens Kryp & Djur" },
+        { w: "VALP", c: "Jagar fjärilar i trädgården", cat: "Sommarens Kryp & Djur" },
+        { w: "EKORRE", c: "Skuttar vigt i tallens grenar", cat: "Sommarens Kryp & Djur" },
+        { w: "KOTTE", c: "Faller från granen ner på stigen", cat: "Natur & Blommor" },
+        { w: "BARR", c: "Gröna barr som doftar skog", cat: "Natur & Blommor" },
+        { w: "TALL", c: "Högt barrträd med rödaktig bark", cat: "Natur & Blommor" },
+        { w: "GRAN", c: "Barrträd som ger skugga i skogen", cat: "Natur & Blommor" },
+        { w: "ASP", c: "Träd vars blad darrar i minsta vind", cat: "Natur & Blommor" },
+        { w: "AL", c: "Växer gärna alldeles vid strandkanten", cat: "Natur & Blommor" },
+        { w: "LÖN", c: "Träd med stora handflikiga blad", cat: "Natur & Blommor" },
+        { w: "RÖNN", c: "Får röda bär mot sensommaren", cat: "Natur & Blommor" },
+        { w: "KÄRLEK", c: "Känns extra stark under sommarlovet", cat: "Semester & Midsommar" },
+        { w: "ROMANTIK", c: "Picknick på klipporna i solnedgången", cat: "Semester & Midsommar" },
+        { w: "GITARR", c: "Spelas vid lägerelden på kvällen", cat: "Aktiviteter & Spel" },
+        { w: "SÅNG", c: "Visor och allsång på Skansen", cat: "Aktiviteter & Spel" },
+        { w: "VISA", c: "Idas sommarvisa sjungs i skolavslutningen", cat: "Semester & Midsommar" },
+        { w: "ALLSÅNG", c: "När alla sjunger glatt tillsammans", cat: "Aktiviteter & Spel" },
+        { w: "SCEN", c: "Här spelar sommarorkestern upp", cat: "Aktiviteter & Spel" },
+        { w: "PARK", c: "Grön oas mitt i sommarstaden", cat: "Semester & Midsommar" },
+        { w: "BÄNK", c: "Skönt att sitta på och äta glass", cat: "Semester & Midsommar" },
+        { w: "FONTIÄN", c: "Vatten som sprutar mitt i dammen", cat: "Semester & Midsommar" },
+        { w: "PLASKA", c: "Leka och sprätta vatten på vännerna", cat: "Bad & Strand" },
+        { w: "KRYSNING", c: "Båttur mellan holmar och skär", cat: "Båt & Skärgård" },
+        { w: "TURBÅT", c: "Tar semesterfirare ut till ön", cat: "Båt & Skärgård" },
+        { w: "BILFÄRJA", c: "Transporterar bilar över sundet", cat: "Båt & Skärgård" },
+        { w: "RESARE", c: "Person på sommaräventyr", cat: "Semester & Midsommar" },
+        { w: "VÄSKA", c: "Packas med badkläder och solhatt", cat: "Semester & Midsommar" },
+        { w: "RYGGSÄCK", c: "Rymmer termos och god matsäck", cat: "Aktiviteter & Spel" },
+        { w: "TERMOS", c: "Håller kaffet varmt på utflykten", cat: "Sommarstuga & Grill" },
+        { w: "MACKA", c: "Smörgås som smakar toppen i bersån", cat: "Glass & Sommargott" },
+        { w: "OSTKAKA", c: "God efterrätt med jordgubbssylt", cat: "Glass & Sommargott" },
+        { w: "SYLT", c: "Kokas på nyplockade bär", cat: "Glass & Sommargott" },
+        { w: "BÄRBUSKE", c: "Här växer vinbär och krusbär", cat: "Natur & Blommor" },
+        { w: "VINBÄR", c: "Röda, svarta eller vita bärklasar", cat: "Glass & Sommargott" },
+        { w: "LINGON", c: "Röda bär som mognar mot hösten", cat: "Glass & Sommargott" },
+        { w: "HJORTRON", c: "Skogens guld på myren i norr", cat: "Glass & Sommargott" },
+        { w: "TRANBÄR", c: "Röda syrliga bär på gungflyt", cat: "Glass & Sommargott" },
+        { w: "KORG", c: "Fylls med bär och svamp i skogen", cat: "Aktiviteter & Spel" },
+        { w: "SVAMP", c: "Kantareller lyser gula i mossan", cat: "Natur & Blommor" },
+        { w: "SOLLJUS", c: "Värmer gott genom rutan", cat: "Sol & Sommarväder" },
+        { w: "SOMMAR", c: "Årets allra skönaste årstid", cat: "Semester & Midsommar" }
+      ];
+
+      extraSummerVocabulary.forEach(item => {
+        const cleanWord = item.w.trim().toUpperCase();
+        if (!seenWords.has(cleanWord) && cleanWord.length >= 3) {
+          seenWords.add(cleanWord);
+          levels.push({
+            level: levels.length + 1,
+            word: cleanWord,
+            clue: item.c,
+            category: item.cat
+          });
+        }
+      });
+
+      // Procedur-generator för att expandera till exakt 500 unika banor
+      // Använder sammansatta och tematiska svenska sommarord
+      const prefixes = [
+        "SOL", "SOMMAR", "STRAND", "HAVS", "SJÖ", "BÅT", "SKÄRGÅRDS", 
+        "BRYGG", "BAD", "BLOMSTER", "GRILL", "SKOGS", "FJÄLL", "Ö"
+      ];
+      const suffixes = [
+        "VIND", "BRIS", "VÅG", "DAG", "NATT", "FEST", "LEK", "TUR", 
+        "GLÄDJE", "MYS", "KVÄLL", "MORGON", "STUND", "RO", "LIV", "TID",
+        "MINNE", "GLIMT", "PARADIS", "VIK", "KUST", "Ö", "DRÖM", "VÄG"
+      ];
+
+      const customWordTemplates = [
+        { pre: "SOL", suf: "HATT", clue: "Skyddar huvudet mot stark sol", cat: "Bad & Strand" },
+        { pre: "SOL", suf: "GLASÖGON", clue: "Mörka glas för ögonen i ljuset", cat: "Bad & Strand" },
+        { pre: "BAD", suf: "HYTT", clue: "Litet hus att byta om i vid havet", cat: "Bad & Strand" },
+        { pre: "BAD", suf: "LAKAN", clue: "Stort mjukt tyg att ligga på", cat: "Bad & Strand" },
+        { pre: "HAVS", suf: "ÖRN", clue: "Mäktig rovfågel över kobbar", cat: "Sommarens Kryp & Djur" },
+        { pre: "SKÄRGÅRDS", suf: "BÅT", clue: "Vit båt som kryssar mellan öarna", cat: "Båt & Skärgård" },
+        { pre: "SMÖRGÅS", suf: "TÅRTA", clue: "Festlig tårta med räkor och lax", cat: "Glass & Sommargott" },
+        { pre: "STRAND", suf: "PROMENAD", clue: "Gå längs vattnet i solnedgången", cat: "Bad & Strand" },
+        { pre: "SOMMAR", suf: "STAD", clue: "Stad som lever upp på sommaren", cat: "Semester & Midsommar" },
+        { pre: "KVARTER", suf: "FEST", clue: "Fest med alla grannarna på gatan", cat: "Semester & Midsommar" },
+        { pre: "KROK", suf: "BÖJ", clue: "Görs på metkroken", cat: "Aktiviteter & Spel" },
+        { pre: "KOBB", suf: "HOPPNING", clue: "Hoppa mellan klipporna vid havet", cat: "Aktiviteter & Spel" }
+      ];
+
+      customWordTemplates.forEach(t => {
+        const w = (t.pre + t.suf).toUpperCase();
+        if (!seenWords.has(w) && levels.length < 500) {
+          seenWords.add(w);
+          levels.push({
+            level: levels.length + 1,
+            word: w,
+            clue: t.clue,
+            category: t.cat
+          });
+        }
+      });
+
+      // Kombinera prefix och suffix systematiskt för att fylla upp till 500
+      for (let p of prefixes) {
+        for (let s of suffixes) {
+          if (levels.length >= 500) break;
+          const combined = (p + s).toUpperCase();
+          if (!seenWords.has(combined) && combined.length >= 4 && combined.length <= 11) {
+            seenWords.add(combined);
+            let cat = "Sommar & Sol";
+            if (p.includes("STRAND") || p.includes("BAD") || p.includes("HAV")) cat = "Bad & Strand";
+            else if (p.includes("BÅT") || p.includes("SJÖ") || p.includes("Ö")) cat = "Båt & Skärgård";
+            else if (p.includes("GRILL")) cat = "Sommarstuga & Grill";
+            else if (p.includes("BLOMSTER") || p.includes("SKOGS")) cat = "Natur & Blommor";
+
+            levels.push({
+              level: levels.length + 1,
+              word: combined,
+              clue: `Härlig känsla av ${p.toLowerCase()} och ${s.toLowerCase()}`,
+              category: cat
+            });
+          }
+        }
+        if (levels.length >= 500) break;
+      }
+
+      // Sortera efter ordlängd med lite variation så spelet börjar lätt och blir klurigare
+      levels.sort((a, b) => {
+        if (a.word.length === b.word.length) {
+          return a.level - b.level;
+        }
+        return a.word.length - b.word.length;
+      });
+
+      // Numrera om banorna från 1 till 500
+      return levels.slice(0, 500).map((lvl, index) => ({
+        ...lvl,
+        level: index + 1
+      }));
+    }
+
+    const ALL_LEVELS = generate500Levels();
+
+    /* ==========================================================================
+       2. LJUDMOTOR (Web Audio API - Syntetiska Ljudeffekter)
+       Inga externa filer krävs. Fungerar direkt i moderna webbläsare.
+       ========================================================================== */
+    class SoundEngine {
+      constructor() {
+        this.ctx = null;
+        this.enabled = true;
+      }
+
+      init() {
+        if (!this.ctx) {
+          const AudioContext = window.AudioContext || window.webkitAudioContext;
+          if (AudioContext) {
+            this.ctx = new AudioContext();
+          }
+        }
+      }
+
+      playTone(freq, type = 'sine', duration = 0.1, gainVal = 0.15) {
+        if (!this.enabled) return;
+        this.init();
+        if (!this.ctx) return;
+        if (this.ctx.state === 'suspended') {
+          this.ctx.resume();
+        }
+
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+
+        gain.gain.setValueAtTime(gainVal, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + duration);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+
+        osc.start();
+        osc.stop(this.ctx.currentTime + duration);
+      }
+
+      // Bokstav klickad (mjuk popp)
+      playTileClick() {
+        this.playTone(480, 'triangle', 0.08, 0.2);
+      }
+
+      // Ta bort bokstav
+      playTileRemove() {
+        this.playTone(320, 'sine', 0.08, 0.15);
+      }
+
+      // Blanda bokstäver
+      playShuffle() {
+        this.playTone(380, 'sine', 0.05, 0.1);
+        setTimeout(() => this.playTone(450, 'sine', 0.05, 0.1), 50);
+      }
+
+      // Fel svar (mjuk nedåtgående ton)
+      playError() {
+        if (!this.enabled) return;
+        this.init();
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(180, now);
+        osc.frequency.linearRampToValueAtTime(110, now + 0.25);
+        gain.gain.setValueAtTime(0.12, now);
+        gain.gain.linearRampToValueAtTime(0.01, now + 0.25);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start();
+        osc.stop(now + 0.25);
+      }
+
+      // Rätt svar fanfar (harmonisk glad ackordföljd)
+      playWin() {
+        if (!this.enabled) return;
+        const notes = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
+        notes.forEach((freq, idx) => {
+          setTimeout(() => {
+            this.playTone(freq, 'triangle', 0.25, 0.22);
+          }, idx * 90);
+        });
+      }
+
+      // Använd ledtråd
+      playHint() {
+        this.playTone(700, 'sine', 0.12, 0.15);
+        setTimeout(() => this.playTone(1050, 'sine', 0.18, 0.15), 100);
+      }
+    }
+
+    const sound = new SoundEngine();
+
+    /* ==========================================================================
+       3. SPELTILLSTÅND OCH SPARANDE (LocalStorage)
+       ========================================================================== */
+    const STORAGE_KEY = 'sommarord_save_v1';
+
+    let gameState = {
+      currentLevelIndex: 0,
+      unlockedLevel: 1,
+      coins: 60,
+      streak: 0,
+      soundEnabled: true,
+      clearedLevels: {} // { levelNum: { stars: 3, word: "SOL" } }
+    };
+
+    function loadGame() {
+      try {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          gameState = { ...gameState, ...parsed };
+        }
+      } catch (e) {
+        console.warn("Kunde inte läsa localStorage", e);
+      }
+      sound.enabled = gameState.soundEnabled;
+    }
+
+    function saveGame() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(gameState));
+      } catch (e) {
+        console.warn("Kunde inte spara till localStorage", e);
+      }
+    }
+
+    /* ==========================================================================
+       4. SPELMOTOR & INTERAKTIVITET
+       ========================================================================== */
+    let currentWordObj = null;
+    let scrambledLetters = []; // [{ id, char, used }]
+    let answerSlots = [];      // [{ id, char, poolIndex }]
+
+    // HTML-element
+    const headerLevelBadge = document.getElementById('header-level-badge');
+    const headerCoins = document.getElementById('header-coins');
+    const categoryBadge = document.getElementById('category-badge');
+    const wordClue = document.getElementById('word-clue');
+    const targetSlotsContainer = document.getElementById('target-slots-container');
+    const lettersPool = document.getElementById('letters-pool');
+    const feedbackMsg = document.getElementById('feedback-msg');
+    const levelStars = document.getElementById('level-stars');
+    const soundIcon = document.getElementById('sound-icon');
+
+    // Modaler
+    const modalLevels = document.getElementById('modal-levels');
+    const modalWin = document.getElementById('modal-win');
+    const winSolvedWord = document.getElementById('win-solved-word');
+    const streakBadge = document.getElementById('streak-badge');
+
+    // Fisher-Yates shuffle
+    function shuffleArray(array) {
+      const arr = [...array];
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+      return arr;
+    }
+
+    // Skapa en garanterat blandad version av ordet (inte samma som originalet om möjligt)
+    function scrambleWord(word) {
+      const chars = word.split('');
+      if (chars.length <= 1) return chars;
+      let shuffled = shuffleArray(chars);
+      let attempts = 0;
+      while (shuffled.join('') === word && attempts < 10) {
+        shuffled = shuffleArray(chars);
+        attempts++;
+      }
+      return shuffled;
+    }
+
+    // Starta en bana
+    function loadLevel(index) {
+      if (index < 0) index = 0;
+      if (index >= ALL_LEVELS.length) index = ALL_LEVELS.length - 1;
+
+      gameState.currentLevelIndex = index;
+      saveGame();
+
+      currentWordObj = ALL_LEVELS[index];
+      const word = currentWordObj.word;
+
+      // Uppdatera Header & Badges
+      headerLevelBadge.textContent = `Bana ${currentWordObj.level}`;
+      categoryBadge.textContent = currentWordObj.category;
+      wordClue.textContent = currentWordObj.clue;
+      headerCoins.textContent = gameState.coins;
+
+      // Uppdatera banstatus/stjärnor
+      const isCleared = !!gameState.clearedLevels[currentWordObj.level];
+      levelStars.textContent = isCleared ? "⭐ Klarad" : "🌟 Ny bana";
+      levelStars.className = isCleared ? "text-amber-500 font-bold text-xs" : "text-sky-600 font-bold text-xs";
+
+      // Skapa scramblade bokstäver
+      const scrambled = scrambleWord(word);
+      scrambledLetters = scrambled.map((char, idx) => ({
+        id: `tile-${idx}-${char}`,
+        char: char,
+        used: false
+      }));
+
+      // Tomma svarspositioner
+      answerSlots = Array(word.length).fill(null);
+
+      hideFeedback();
+      renderGame();
+    }
+
+    // Rendera spelytan
+    function renderGame() {
+      renderAnswerSlots();
+      renderPoolTiles();
+    }
+
+    // Rendera svarsrutor
+    function renderAnswerSlots() {
+      targetSlotsContainer.innerHTML = '';
+      answerSlots.forEach((slot, index) => {
+        const btn = document.createElement('button');
+        const hasChar = slot !== null;
+        
+        btn.className = `w-11 h-12 sm:w-13 sm:h-14 md:w-14 md:h-16 rounded-2xl font-black title-font text-xl sm:text-2xl flex items-center justify-center transition-all ${
+          hasChar 
+            ? 'bg-amber-400 text-amber-950 border-2 border-amber-300 shadow-md transform hover:-translate-y-0.5 active:scale-95' 
+            : 'bg-white/60 border-2 border-dashed border-sky-300 text-transparent slot-shadow'
+        }`;
+
+        btn.textContent = hasChar ? slot.char : '';
+        
+        if (hasChar) {
+          btn.title = "Klicka för att ta bort";
+          btn.addEventListener('click', () => {
+            sound.playTileRemove();
+            removeAnswerAt(index);
+          });
+        }
+
+        targetSlotsContainer.appendChild(btn);
+      });
+    }
+
+    // Rendera bokstavsbrickor
+    function renderPoolTiles() {
+      lettersPool.innerHTML = '';
+      scrambledLetters.forEach((tile, index) => {
+        const btn = document.createElement('button');
+        const isUsed = tile.used;
+
+        btn.className = `w-12 h-14 sm:w-14 sm:h-16 md:w-16 md:h-18 rounded-2xl font-black title-font text-2xl sm:text-3xl flex items-center justify-center transition-all ${
+          isUsed
+            ? 'opacity-0 scale-75 pointer-events-none'
+            : 'bg-white text-sea-800 border-2 border-sea-200 tile-shadow hover:bg-yellow-50 active:scale-95 animate-pop'
+        }`;
+
+        btn.textContent = tile.char;
+
+        btn.addEventListener('click', () => {
+          if (!tile.used) {
+            sound.playTileClick();
+            selectTile(index);
+          }
+        });
+
+        lettersPool.appendChild(btn);
+      });
+    }
+
+    // Klicka på en bokstav i poolen
+    function selectTile(poolIndex) {
+      const tile = scrambledLetters[poolIndex];
+      if (tile.used) return;
+
+      // Hitta första lediga plats i svarsrutorna
+      const emptyIndex = answerSlots.findIndex(slot => slot === null);
+      if (emptyIndex === -1) return;
+
+      tile.used = true;
+      answerSlots[emptyIndex] = {
+        poolIndex: poolIndex,
+        char: tile.char
+      };
+
+      hideFeedback();
+      renderGame();
+
+      // Kontrollera om ordet är komplett
+      checkIfComplete();
+    }
+
+    // Ta bort en bokstav från svarsrutan
+    function removeAnswerAt(slotIndex) {
+      const slot = answerSlots[slotIndex];
+      if (!slot) return;
+
+      scrambledLetters[slot.poolIndex].used = false;
+      answerSlots[slotIndex] = null;
+
+      // Packa ihop svaret åt vänster för smidigt flöde
+      const remaining = answerSlots.filter(s => s !== null);
+      answerSlots = remaining.concat(Array(currentWordObj.word.length - remaining.length).fill(null));
+
+      hideFeedback();
+      renderGame();
+    }
+
+    // Ångra senast lagda bokstav
+    function backspace() {
+      for (let i = answerSlots.length - 1; i >= 0; i--) {
+        if (answerSlots[i] !== null) {
+          sound.playTileRemove();
+          removeAnswerAt(i);
+          break;
+        }
+      }
+    }
+
+    // Rensa alla valda bokstäver
+    function clearAll() {
+      let hadLetters = false;
+      answerSlots.forEach(slot => {
+        if (slot !== null) {
+          scrambledLetters[slot.poolIndex].used = false;
+          hadLetters = true;
+        }
+      });
+      if (hadLetters) sound.playTileRemove();
+      answerSlots = Array(currentWordObj.word.length).fill(null);
+      hideFeedback();
+      renderGame();
+    }
+
+    // Blanda de återstående lediga bokstäverna
+    function shuffleAvailableTiles() {
+      sound.playShuffle();
+      // Separera lediga från använda
+      const unusedIndices = [];
+      const unusedChars = [];
+
+      scrambledLetters.forEach((tile, idx) => {
+        if (!tile.used) {
+          unusedIndices.push(idx);
+          unusedChars.push(tile.char);
+        }
+      });
+
+      const shuffledChars = shuffleArray(unusedChars);
+      unusedIndices.forEach((idx, i) => {
+        scrambledLetters[idx].char = shuffledChars[i];
+      });
+
+      renderPoolTiles();
+    }
+
+    // Visa feedback vid fel
+    function showFeedback(text) {
+      feedbackMsg.textContent = text;
+      feedbackMsg.classList.remove('opacity-0');
+      targetSlotsContainer.classList.add('animate-shake');
+      setTimeout(() => {
+        targetSlotsContainer.classList.remove('animate-shake');
+      }, 500);
+    }
+
+    function hideFeedback() {
+      feedbackMsg.classList.add('opacity-0');
+    }
+
+    // Kontrollera svar
+    function checkIfComplete() {
+      const isFull = answerSlots.every(s => s !== null);
+      if (!isFull) return;
+
+      const userWord = answerSlots.map(s => s.char).join('');
+      const correctWord = currentWordObj.word;
+
+      if (userWord === correctWord) {
+        handleLevelVictory();
+      } else {
+        sound.playError();
+        showFeedback("Inte riktigt rätt, försök igen! 🌴");
+      }
+    }
+
+    // Vinsthantering
+    function handleLevelVictory() {
+      sound.playWin();
+
+      const lvlNum = currentWordObj.level;
+      const isFirstClear = !gameState.clearedLevels[lvlNum];
+
+      // Belöning
+      if (isFirstClear) {
+        gameState.coins += 10;
+        gameState.streak += 1;
+      }
+
+      gameState.clearedLevels[lvlNum] = {
+        stars: 3,
+        word: currentWordObj.word
+      };
+
+      // Lås upp nästa bana
+      if (lvlNum >= gameState.unlockedLevel && gameState.unlockedLevel < ALL_LEVELS.length) {
+        gameState.unlockedLevel = lvlNum + 1;
+      }
+
+      saveGame();
+
+      // Uppdatera header
+      headerCoins.textContent = gameState.coins;
+
+      // Konfetti-explosion
+      if (typeof confetti === 'function') {
+        confetti({
+          particleCount: 80,
+          spread: 70,
+          origin: { y: 0.6 },
+          colors: ['#F59E0B', '#38BDF8', '#10B981', '#EC4899', '#FEF08A']
+        });
+      }
+
+      // Visa Vinstmodal
+      winSolvedWord.textContent = currentWordObj.word;
+      streakBadge.innerHTML = `<span>🔥</span> Streak: ${gameState.streak}`;
+      showModal(modalWin);
+    }
+
+    // Ledtrådsknapp: Fyll i nästa korrekta bokstav
+    function useHint() {
+      const HINT_COST = 15;
+      if (gameState.coins < HINT_COST) {
+        showFeedback("Du behöver 15☀️ för en ledtråd!");
+        sound.playError();
+        return;
+      }
+
+      // Hitta första positionen där rätt bokstav saknas
+      const correctWord = currentWordObj.word;
+      let targetIndex = -1;
+
+      for (let i = 0; i < correctWord.length; i++) {
+        if (!answerSlots[i] || answerSlots[i].char !== correctWord[i]) {
+          targetIndex = i;
+          break;
+        }
+      }
+
+      if (targetIndex === -1) return; // Allt är redan rätt
+
+      // Dra av mynt
+      gameState.coins -= HINT_COST;
+      headerCoins.textContent = gameState.coins;
+      saveGame();
+      sound.playHint();
+
+      // Om det finns en felaktig bokstav på platsen, ta bort den
+      if (answerSlots[targetIndex]) {
+        removeAnswerAt(targetIndex);
+      }
+
+      // Leta upp den korrekta bokstaven i scrambledLetters som inte är 'used'
+      const neededChar = correctWord[targetIndex];
+      let poolIdx = scrambledLetters.findIndex(t => !t.used && t.char === neededChar);
+
+      // Om ingen ledig hittas (bokstaven kanske placerats fel i en annan svarsruta),
+      // rensa den felplacerade rutan först
+      if (poolIdx === -1) {
+        for (let j = 0; j < answerSlots.length; j++) {
+          if (answerSlots[j] && answerSlots[j].char === neededChar && j !== targetIndex) {
+            removeAnswerAt(j);
+            break;
+          }
+        }
+        poolIdx = scrambledLetters.findIndex(t => !t.used && t.char === neededChar);
+      }
+
+      if (poolIdx !== -1) {
+        scrambledLetters[poolIdx].used = true;
+        answerSlots[targetIndex] = {
+          poolIndex: poolIdx,
+          char: neededChar
+        };
+        renderGame();
+        checkIfComplete();
+      }
+    }
+
+    /* ==========================================================================
+       5. BANVÄLJARE MED 500 BANOR (Sidvisning & Sök)
+       ========================================================================== */
+    const LEVELS_PER_PAGE = 25;
+    let currentLevelPage = 0;
+
+    const levelsGrid = document.getElementById('levels-grid');
+    const pageIndicator = document.getElementById('page-indicator');
+    const btnPrevPage = document.getElementById('btn-prev-page');
+    const btnNextPage = document.getElementById('btn-next-page');
+    const inputJumpLevel = document.getElementById('input-jump-level');
+
+    function renderLevelsModalPage(page) {
+      currentLevelPage = page;
+      const totalPages = Math.ceil(ALL_LEVELS.length / LEVELS_PER_PAGE);
+      const startIdx = page * LEVELS_PER_PAGE;
+      const endIdx = Math.min(startIdx + LEVELS_PER_PAGE, ALL_LEVELS.length);
+
+      pageIndicator.textContent = `Sida ${page + 1} / ${totalPages} (Bana ${startIdx + 1} - ${endIdx})`;
+      btnPrevPage.disabled = (page === 0);
+      btnNextPage.disabled = (page >= totalPages - 1);
+
+      levelsGrid.innerHTML = '';
+
+      for (let i = startIdx; i < endIdx; i++) {
+        const lvlData = ALL_LEVELS[i];
+        const lvlNum = lvlData.level;
+        const isUnlocked = lvlNum <= gameState.unlockedLevel;
+        const isCleared = !!gameState.clearedLevels[lvlNum];
+        const isCurrent = i === gameState.currentLevelIndex;
+
+        const card = document.createElement('button');
+        card.className = `flex flex-col items-center justify-center p-2 rounded-2xl border transition-all ${
+          isCurrent 
+            ? 'ring-4 ring-amber-400 bg-amber-100 text-amber-950 font-black border-amber-300' 
+            : isCleared
+              ? 'bg-emerald-50 border-emerald-300 text-emerald-800 hover:bg-emerald-100 font-bold'
+              : isUnlocked
+                ? 'bg-sky-50 border-sky-300 text-sky-800 hover:bg-sky-100 font-semibold'
+                : 'bg-slate-100 border-slate-200 text-slate-400 opacity-60 cursor-not-allowed'
+        }`;
+
+        if (!isUnlocked) {
+          card.innerHTML = `<span class="text-xs text-slate-400">🔒</span><span class="text-xs font-bold">${lvlNum}</span>`;
+          card.disabled = true;
+        } else {
+          card.innerHTML = `
+            <span class="text-sm font-extrabold">${lvlNum}</span>
+            <span class="text-[10px] mt-0.5">${isCleared ? '⭐' : '☀️'}</span>
+          `;
+          card.addEventListener('click', () => {
+            sound.playTileClick();
+            hideModal(modalLevels);
+            loadLevel(i);
+          });
+        }
+
+        levelsGrid.appendChild(card);
+      }
+    }
+
+    function openLevelsModal() {
+      // Öppna direkt på sidan där användarens nuvarande bana finns
+      currentLevelPage = Math.floor(gameState.currentLevelIndex / LEVELS_PER_PAGE);
+      renderLevelsModalPage(currentLevelPage);
+      showModal(modalLevels);
+    }
+
+    function showModal(modalEl) {
+      modalEl.classList.remove('hidden');
+      setTimeout(() => {
+        modalEl.classList.remove('opacity-0');
+      }, 10);
+    }
+
+    function hideModal(modalEl) {
+      modalEl.classList.add('opacity-0');
+      setTimeout(() => {
+        modalEl.classList.add('hidden');
+      }, 200);
+    }
+
+    /* ==========================================================================
+       6. TANGENTBORDSINTERAKTION & EVENT LISTENERS
+       ========================================================================== */
+    // Tangentbordsstöd (A-Ö, Backsteg, Enter)
+    window.addEventListener('keydown', (e) => {
+      // Ignorera om modaler är öppna och input-fält har fokus
+      if (document.activeElement === inputJumpLevel) return;
+
+      const key = e.key.toUpperCase();
+
+      if (e.key === 'Backspace') {
+        e.preventDefault();
+        backspace();
+      } else if (e.key === 'Enter') {
+        if (!modalWin.classList.contains('hidden')) {
+          hideModal(modalWin);
+          loadLevel(gameState.currentLevelIndex + 1);
+        }
+      } else if (/^[A-ZÅÄÖ]$/.test(key)) {
+        // Hitta första lediga bokstav i scrambled pool som matchar tangenten
+        const poolIndex = scrambledLetters.findIndex(tile => !tile.used && tile.char === key);
+        if (poolIndex !== -1) {
+          sound.playTileClick();
+          selectTile(poolIndex);
+        }
+      }
+    });
+
+    // Knappar i gränssnittet
+    document.getElementById('btn-shuffle').addEventListener('click', shuffleAvailableTiles);
+    document.getElementById('btn-backspace').addEventListener('click', backspace);
+    document.getElementById('btn-clear').addEventListener('click', clearAll);
+    document.getElementById('btn-hint').addEventListener('click', useHint);
+
+    // Header-knappar
+    document.getElementById('btn-open-levels').addEventListener('click', openLevelsModal);
+    document.getElementById('btn-close-levels').addEventListener('click', () => hideModal(modalLevels));
+
+    // Ljudknapp
+    document.getElementById('btn-toggle-sound').addEventListener('click', () => {
+      gameState.soundEnabled = !gameState.soundEnabled;
+      sound.enabled = gameState.soundEnabled;
+      soundIcon.textContent = gameState.soundEnabled ? '🔊' : '🔇';
+      saveGame();
+    });
+
+    // Banbläddring i modal
+    btnPrevPage.addEventListener('click', () => {
+      if (currentLevelPage > 0) renderLevelsModalPage(currentLevelPage - 1);
+    });
+    btnNextPage.addEventListener('click', () => {
+      const totalPages = Math.ceil(ALL_LEVELS.length / LEVELS_PER_PAGE);
+      if (currentLevelPage < totalPages - 1) renderLevelsModalPage(currentLevelPage + 1);
+    });
+
+    // Hoppa till bana
+    document.getElementById('btn-jump-level').addEventListener('click', () => {
+      const val = parseInt(inputJumpLevel.value, 10);
+      if (!isNaN(val) && val >= 1 && val <= 500) {
+        if (val <= gameState.unlockedLevel) {
+          hideModal(modalLevels);
+          loadLevel(val - 1);
+        } else {
+          showFeedback(`Bana ${val} är låst! Klarade banor först.`);
+          sound.playError();
+        }
+      }
+    });
+
+    // Vinstmodal-knappar
+    document.getElementById('btn-next-level').addEventListener('click', () => {
+      hideModal(modalWin);
+      loadLevel(gameState.currentLevelIndex + 1);
+    });
+    document.getElementById('btn-win-levels').addEventListener('click', () => {
+      hideModal(modalWin);
+      openLevelsModal();
+    });
+
+    // Stäng modal vid klick på bakgrunden
+    [modalLevels, modalWin].forEach(modal => {
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) hideModal(modal);
+      });
+    });
+
+    /* ==========================================================================
+       7. STARTA SPELET VID LADDNING
+       ========================================================================== */
+    window.addEventListener('load', () => {
+      loadGame();
+      soundIcon.textContent = gameState.soundEnabled ? '🔊' : '🔇';
+      loadLevel(gameState.currentLevelIndex || 0);
+    });
+  </script>
+</body>
+</html>

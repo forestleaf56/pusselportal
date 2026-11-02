@@ -1,0 +1,922 @@
+<!DOCTYPE html>
+<html lang="sv" class="h-full bg-slate-950 text-slate-100 select-none">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Halloween Nonogram - 50 Pussel</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts: Creepster & Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Creepster&family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        spooky: {
+                            orange: '#ff6b00',
+                            purple: '#6b21a8',
+                            dark: '#0f0716',
+                            card: '#1e0c2a',
+                            accent: '#a855f7',
+                            green: '#22c55e'
+                        }
+                    },
+                    fontFamily: {
+                        scary: ['Creepster', 'cursive'],
+                        sans: ['Inter', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+            overflow-x: hidden;
+        }
+
+        .scary-title {
+            font-family: 'Creepster', cursive;
+            text-shadow: 0 0 10px #ff6b00, 0 0 20px #ff6b00, 0 0 30px #6b21a8;
+        }
+
+        .cell {
+            aspect-ratio: 1 / 1;
+            transition: background-color 0.12s ease, transform 0.05s ease;
+        }
+        .cell:active {
+            transform: scale(0.92);
+        }
+
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0f0716;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #6b21a8;
+            border-radius: 3px;
+        }
+
+        @keyframes floatBat {
+            0% { transform: translate(0, 0) scale(0.8) rotate(0deg); opacity: 0; }
+            20% { opacity: 0.3; }
+            80% { opacity: 0.3; }
+            100% { transform: translate(120vw, -100vh) scale(1.2) rotate(15deg); opacity: 0; }
+        }
+
+        .bat {
+            position: absolute;
+            pointer-events: none;
+            color: rgba(255, 107, 0, 0.15);
+            animation: floatBat 14s linear infinite;
+        }
+    </style>
+</head>
+<body class="h-full bg-spooky-dark flex flex-col justify-between relative overflow-hidden text-slate-100">
+
+    <!-- Floating Background Particles -->
+    <div id="bat-container" class="absolute inset-0 pointer-events-none z-0 overflow-hidden"></div>
+
+    <!-- Header Navigation -->
+    <header class="relative z-10 w-full bg-spooky-card/90 backdrop-blur-md border-b border-purple-900/40 p-2.5 px-4 flex justify-between items-center shadow-lg">
+        <div class="flex items-center gap-2 cursor-pointer" onclick="showLevelSelect()">
+            <i class="fa-solid fa-ghost text-spooky-orange text-2xl animate-bounce"></i>
+            <h1 class="scary-title text-2xl sm:text-3xl text-spooky-orange tracking-wider">Spooky Grid</h1>
+        </div>
+        <div class="flex items-center gap-2">
+            <button onclick="toggleAudio()" id="audio-btn" class="p-2 rounded-full bg-purple-950/80 border border-purple-700/50 text-purple-300 hover:text-orange-400 transition" title="Ljud på/av">
+                <i class="fa-solid fa-volume-high text-base"></i>
+            </button>
+            <button onclick="showHelp()" class="p-2 rounded-full bg-purple-950/80 border border-purple-700/50 text-purple-300 hover:text-orange-400 transition" title="Hjälp">
+                <i class="fa-solid fa-circle-question text-base"></i>
+            </button>
+            <button onclick="showLevelSelect()" class="px-3 py-1.5 rounded-lg bg-spooky-orange hover:bg-orange-600 text-slate-950 font-bold text-xs sm:text-sm transition shadow-md flex items-center gap-1.5">
+                <i class="fa-solid fa-grid-2"></i>
+                <span>50 Pussel</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="relative z-10 flex-1 flex flex-col items-center justify-center p-2 sm:p-4 max-w-5xl mx-auto w-full">
+
+        <!-- LEVEL SELECT VIEW -->
+        <div id="level-select-view" class="w-full flex flex-col items-center gap-4 py-2">
+            <div class="text-center space-y-1">
+                <h2 class="scary-title text-3xl sm:text-4xl text-orange-500">Välj ett Pussel</h2>
+                <p class="text-xs sm:text-sm text-purple-300">50 läskiga Halloween-mönster att låsa upp och lösa!</p>
+            </div>
+
+            <!-- Category Tabs -->
+            <div class="flex gap-2 bg-purple-950/60 p-1.5 rounded-xl border border-purple-900/60 text-xs font-bold">
+                <button onclick="filterCategory('all')" id="tab-all" class="px-3 py-1.5 rounded-lg bg-spooky-orange text-slate-950 transition">Alla (50)</button>
+                <button onclick="filterCategory('5')" id="tab-5" class="px-3 py-1.5 rounded-lg text-purple-300 hover:text-white transition">5x5 Lätt</button>
+                <button onclick="filterCategory('10')" id="tab-10" class="px-3 py-1.5 rounded-lg text-purple-300 hover:text-white transition">10x10 Medium</button>
+                <button onclick="filterCategory('15')" id="tab-15" class="px-3 py-1.5 rounded-lg text-purple-300 hover:text-white transition">15x15 Svår</button>
+            </div>
+
+            <!-- Progress Stats -->
+            <div class="text-xs text-purple-300/80 flex gap-4">
+                <span>Klarade: <strong id="stats-completed" class="text-orange-400">0</strong> / 50</span>
+                <span>Totalt Stjärnor: <strong id="stats-stars" class="text-yellow-400"><i class="fa-solid fa-star text-[10px]"></i> 0</strong></span>
+            </div>
+
+            <!-- Level Cards Grid -->
+            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 w-full px-2 max-h-[62vh] overflow-y-auto p-1" id="levels-grid">
+                <!-- 50 level cards generated by JS -->
+            </div>
+        </div>
+
+        <!-- GAMEPLAY VIEW -->
+        <div id="game-view" class="hidden w-full flex flex-col items-center">
+            
+            <!-- Game Info Bar -->
+            <div class="w-full max-w-md flex justify-between items-center bg-spooky-card/90 border border-purple-900/50 rounded-xl px-4 py-2 mb-2 shadow-md">
+                <div class="flex items-center gap-2">
+                    <span id="level-number" class="text-xs font-bold px-2 py-0.5 rounded bg-orange-950/80 text-orange-400 border border-orange-800">#1</span>
+                    <span id="level-title" class="font-bold text-slate-100 text-sm sm:text-base">Pumpa</span>
+                    <span id="level-size" class="text-xs px-2 py-0.5 rounded bg-purple-950 text-purple-300 border border-purple-800">5x5</span>
+                </div>
+                <div class="flex items-center gap-4 text-xs sm:text-sm">
+                    <div class="flex items-center gap-1 text-slate-300">
+                        <i class="fa-solid fa-clock text-orange-500"></i>
+                        <span id="timer-text" class="font-mono">00:00</span>
+                    </div>
+                    <div class="flex items-center gap-1 text-slate-300">
+                        <i class="fa-solid fa-footsteps text-purple-400"></i>
+                        <span id="move-counter" class="font-mono">0</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Controls / Tools Bar -->
+            <div class="w-full max-w-md flex justify-between items-center gap-2 mb-2">
+                <div class="flex gap-1.5">
+                    <button onclick="undoMove()" class="px-2.5 py-1.5 rounded-lg bg-purple-950/80 border border-purple-800 text-purple-200 text-xs font-semibold hover:bg-purple-900 transition flex items-center gap-1">
+                        <i class="fa-solid fa-rotate-left"></i> Ångra
+                    </button>
+                    <button onclick="resetPuzzle()" class="px-2.5 py-1.5 rounded-lg bg-purple-950/80 border border-purple-800 text-purple-200 text-xs font-semibold hover:bg-purple-900 transition flex items-center gap-1">
+                        <i class="fa-solid fa-trash-can"></i> Rensa
+                    </button>
+                </div>
+                <div class="flex gap-1.5">
+                    <button onclick="useHint()" class="px-2.5 py-1.5 rounded-lg bg-amber-950/80 border border-amber-600/50 text-amber-300 text-xs font-semibold hover:bg-amber-900 transition flex items-center gap-1">
+                        <i class="fa-solid fa-wand-magic-sparkles"></i> Hint (<span id="hint-count">3</span>)
+                    </button>
+                </div>
+            </div>
+
+            <!-- Nonogram Board Wrapper -->
+            <div class="w-full flex justify-center items-center overflow-auto p-1 max-h-[58vh]">
+                <div id="nonogram-board" class="inline-grid bg-purple-950/40 p-2 sm:p-3 rounded-2xl border-2 border-purple-800/60 shadow-2xl backdrop-blur-sm">
+                    <!-- Board dynamically built by JS -->
+                </div>
+            </div>
+
+            <!-- Mobile Tool Toggle -->
+            <div class="mt-3 flex items-center gap-2 bg-spooky-card border border-purple-900/80 rounded-2xl p-1.5 shadow-xl w-full max-w-xs">
+                <button id="mode-fill-btn" onclick="setInteractionMode('fill')" class="flex-1 px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all shadow-md bg-spooky-orange text-slate-950">
+                    <i class="fa-solid fa-square text-base"></i>
+                    <span>Fyll (Markera)</span>
+                </button>
+                <button id="mode-cross-btn" onclick="setInteractionMode('cross')" class="flex-1 px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all text-purple-300 hover:text-white">
+                    <i class="fa-solid fa-xmark text-base"></i>
+                    <span>Korsa (X)</span>
+                </button>
+            </div>
+
+            <p class="text-[10px] text-purple-400/70 mt-1.5 text-center">Dra över rutorna för att markera flera på en gång</p>
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="relative z-10 w-full p-2 text-center text-xs text-purple-400/60 border-t border-purple-950/40">
+        Halloween Nonogram Picross &bull; 50 Halloween-utmaningar
+    </footer>
+
+    <!-- MODAL: WIN SCREEN -->
+    <div id="win-modal" class="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4 hidden">
+        <div class="bg-spooky-card border-2 border-spooky-orange rounded-3xl p-6 max-w-sm w-full text-center shadow-2xl relative overflow-hidden transform transition-all scale-95 opacity-0" id="win-modal-card">
+            
+            <div class="absolute -top-10 -right-10 w-32 h-32 bg-orange-500/20 rounded-full blur-2xl pointer-events-none"></div>
+
+            <h2 class="scary-title text-3xl sm:text-4xl text-orange-500 mb-1">Mästerligt!</h2>
+            <p class="text-xs text-purple-300 mb-2">Du avtäckte Halloween-bilden!</p>
+
+            <!-- Stars Rating -->
+            <div id="win-stars" class="flex justify-center gap-2 text-yellow-400 text-2xl my-2">
+                <i class="fa-solid fa-star"></i>
+                <i class="fa-solid fa-star"></i>
+                <i class="fa-solid fa-star"></i>
+            </div>
+
+            <!-- Rendered Pixel Art -->
+            <div class="my-3 flex justify-center">
+                <div id="win-colored-result" class="p-2 bg-slate-950 rounded-xl border border-purple-800 shadow-inner inline-block"></div>
+            </div>
+
+            <!-- Stats -->
+            <div class="grid grid-cols-2 gap-2 my-3 bg-purple-950/50 p-2.5 rounded-xl border border-purple-900/50 text-xs">
+                <div>
+                    <span class="text-purple-400 block">Tid</span>
+                    <span id="win-time" class="font-bold text-slate-100 text-sm">01:23</span>
+                </div>
+                <div>
+                    <span class="text-purple-400 block">Drag</span>
+                    <span id="win-moves" class="font-bold text-slate-100 text-sm">45</span>
+                </div>
+            </div>
+
+            <!-- Buttons -->
+            <div class="flex flex-col gap-2 mt-3">
+                <button onclick="nextLevel()" id="next-btn" class="w-full py-2.5 rounded-xl bg-spooky-orange hover:bg-orange-600 font-bold text-slate-950 text-sm transition shadow-lg flex items-center justify-center gap-2">
+                    <span>Nästa Pussel</span>
+                    <i class="fa-solid fa-arrow-right"></i>
+                </button>
+                <button onclick="showLevelSelect()" class="w-full py-2 rounded-xl bg-purple-950 border border-purple-800 text-purple-200 font-semibold text-xs hover:bg-purple-900 transition">
+                    Banväljare (50 Pussel)
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: HELP -->
+    <div id="help-modal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 hidden">
+        <div class="bg-spooky-card border border-purple-800 rounded-2xl p-5 max-w-md w-full text-left shadow-2xl relative">
+            <button onclick="hideHelp()" class="absolute top-4 right-4 text-purple-400 hover:text-white text-lg">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+            <h3 class="scary-title text-2xl text-orange-500 mb-3">Hur du spelar Nonogram</h3>
+            <div class="space-y-2 text-xs text-purple-200 leading-relaxed">
+                <p><strong>Mål:</strong> Fyll i rätt rutor i rutnätet för att avslöja den gömda Halloween-bilden!</p>
+                <p><strong>Siffror (Ledtrådar):</strong> Siffrorna visar antalet sammanhängande fyllda rutor i respektive rad eller kolumn.</p>
+                <ul class="list-disc list-inside space-y-1 bg-purple-950/40 p-2.5 rounded-lg border border-purple-900/50">
+                    <li><span class="text-orange-400 font-bold">"3"</span> = 3 fyllda rutor i rad.</li>
+                    <li><span class="text-orange-400 font-bold">"2 1"</span> = En grupp om 2 rutor, minst en tom ruta, och sedan 1 ruta.</li>
+                </ul>
+                <p><strong>Stjärnsystem:</strong> Snabb problemlösning utan för många feldrag ger 3 stjärnor!</p>
+            </div>
+            <button onclick="hideHelp()" class="w-full mt-4 py-2 rounded-xl bg-purple-900 hover:bg-purple-800 text-white font-bold text-xs transition">
+                Stäng
+            </button>
+        </div>
+    </div>
+
+    <!-- JAVASCRIPT LOGIC -->
+    <script>
+        /* --- Audio Manager --- */
+        let audioEnabled = true;
+        let audioCtx = null;
+
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+        }
+
+        function playSound(type) {
+            if (!audioEnabled) return;
+            initAudio();
+            if (!audioCtx) return;
+
+            const now = audioCtx.currentTime;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+
+            if (type === 'fill') {
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(200, now);
+                osc.frequency.exponentialRampToValueAtTime(340, now + 0.07);
+                gain.gain.setValueAtTime(0.12, now);
+                gain.gain.linearRampToValueAtTime(0.01, now + 0.07);
+                osc.start(now);
+                osc.stop(now + 0.07);
+            } else if (type === 'cross') {
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(130, now);
+                osc.frequency.linearRampToValueAtTime(90, now + 0.05);
+                gain.gain.setValueAtTime(0.1, now);
+                gain.gain.linearRampToValueAtTime(0.01, now + 0.05);
+                osc.start(now);
+                osc.stop(now + 0.05);
+            } else if (type === 'clear') {
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(240, now);
+                osc.frequency.linearRampToValueAtTime(140, now + 0.05);
+                gain.gain.setValueAtTime(0.08, now);
+                gain.gain.linearRampToValueAtTime(0.01, now + 0.05);
+                osc.start(now);
+                osc.stop(now + 0.05);
+            } else if (type === 'win') {
+                const notes = [261.63, 329.63, 392.00, 523.25, 659.25];
+                notes.forEach((freq, idx) => {
+                    const o = audioCtx.createOscillator();
+                    const g = audioCtx.createGain();
+                    o.connect(g);
+                    g.connect(audioCtx.destination);
+                    o.type = 'sine';
+                    o.frequency.setValueAtTime(freq, now + idx * 0.09);
+                    g.gain.setValueAtTime(0.12, now + idx * 0.09);
+                    g.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.09 + 0.25);
+                    o.start(now + idx * 0.09);
+                    o.stop(now + idx * 0.09 + 0.25);
+                });
+            } else if (type === 'hint') {
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(440, now);
+                osc.frequency.exponentialRampToValueAtTime(880, now + 0.12);
+                gain.gain.setValueAtTime(0.1, now);
+                gain.gain.linearRampToValueAtTime(0.01, now + 0.12);
+                osc.start(now);
+                osc.stop(now + 0.12);
+            }
+        }
+
+        function toggleAudio() {
+            audioEnabled = !audioEnabled;
+            const btn = document.getElementById('audio-btn');
+            btn.innerHTML = audioEnabled 
+                ? '<i class="fa-solid fa-volume-high text-base"></i>' 
+                : '<i class="fa-solid fa-volume-xmark text-base text-slate-500"></i>';
+        }
+
+        /* --- 50 PUZZLES & FULLY COMPATIBLE FONTAWESOME FREE ICONS --- */
+        
+        const HALLOWEEN_TITLES = [
+            "Pumpa", "Fladdermus", "Spöke", "Häxhatt", "Dödskalle", 
+            "Katt", "Kista", "Stearinljus", "Gryta", "Spindel", 
+            "Spindelnät", "Gravsten", "Fullmåne", "Ögon", "Varulv", 
+            "Vampyr", "Mumiens Hand", "Godis", "Elixir", "Slott", 
+            "Svart Katt", "Korp", "Benknuta", "Lykta", "Svampar", 
+            "Kvast", "Lie", "Råtta", "Monster", "Orm", 
+            "Häxnos", "Hjärta", "Nyckel", "Skattkista", "Port", 
+            "Kyrkogård", "Dimmigt Träd", "Uggla", "Fruktad Bok", "Dimma", 
+            "Nattuggla", "Spökhand", "Pumpalykta", "Trollstav", "Häxbrygd", 
+            "Frankenstein", "Kittel", "Blodsdroppe", "Vampyrtand", "Gravgård"
+        ];
+
+        const HALLOWEEN_ICONS = [
+            "fa-fire", "fa-crow", "fa-ghost", "fa-hat-wizard", "fa-skull",
+            "fa-cat", "fa-box", "fa-fire", "fa-bowl-food", "fa-spider",
+            "fa-spider", "fa-monument", "fa-moon", "fa-eye", "fa-dog",
+            "fa-teeth", "fa-hand", "fa-candy-cane", "fa-flask", "fa-chess-rook",
+            "fa-cat", "fa-crow", "fa-bone", "fa-lightbulb", "fa-seedling",
+            "fa-broom", "fa-toolbox", "fa-bug", "fa-robot", "fa-worm",
+            "fa-face-grimace", "fa-heart", "fa-key", "fa-box-archive", "fa-door-closed",
+            "fa-church", "fa-tree", "fa-feather", "fa-book", "fa-cloud",
+            "fa-kiwi-bird", "fa-hand-peace", "fa-fire-flame-curved", "fa-wand-magic", "fa-bottle-droplet",
+            "fa-ghost", "fa-fire", "fa-droplet", "fa-tooth", "fa-landmark"
+        ];
+
+        const COLOR_PALETTES = [
+            { fill: '#ff6b00', bg: '#1e0c2a' },
+            { fill: '#a855f7', bg: '#1e0c2a' },
+            { fill: '#e2e8f0', bg: '#1e0c2a' },
+            { fill: '#9333ea', bg: '#1e0c2a' },
+            { fill: '#22c55e', bg: '#1e0c2a' },
+            { fill: '#ef4444', bg: '#1e0c2a' },
+            { fill: '#eab308', bg: '#1e0c2a' }
+        ];
+
+        function seededRandom(seed) {
+            let x = Math.sin(seed++) * 10000;
+            return x - Math.floor(x);
+        }
+
+        function generatePattern(size, id) {
+            const grid = Array(size).fill(0).map(() => Array(size).fill(0));
+            let seed = id * 1234;
+
+            const half = Math.ceil(size / 2);
+            for (let r = 0; r < size; r++) {
+                for (let c = 0; c < half; c++) {
+                    let val = 0;
+                    const rand = seededRandom(seed++);
+                    
+                    const distFromCenter = Math.abs(r - size / 2) + Math.abs(c - size / 2);
+                    if (distFromCenter < size * 0.42 && rand > 0.32) {
+                        val = 1;
+                    } else if (rand > 0.65) {
+                        val = 1;
+                    }
+                    
+                    if (r === 0 && (c === 0 || c === size - 1)) val = 0;
+
+                    grid[r][c] = val;
+                    grid[r][size - 1 - c] = val;
+                }
+            }
+            return grid;
+        }
+
+        const PUZZLES = [];
+        for (let i = 0; i < 50; i++) {
+            let size = 5;
+            if (i >= 15 && i < 35) size = 10;
+            else if (i >= 35) size = 15;
+
+            const name = HALLOWEEN_TITLES[i];
+            const icon = HALLOWEEN_ICONS[i];
+            const color = COLOR_PALETTES[i % COLOR_PALETTES.length];
+
+            PUZZLES.push({
+                id: i + 1,
+                name: name,
+                icon: icon,
+                size: size,
+                grid: generatePattern(size, i + 1),
+                colors: color
+            });
+        }
+
+        /* --- Game State --- */
+        let currentPuzzle = null;
+        let playerGrid = [];
+        let currentMode = 'fill';
+        let moves = 0;
+        let timerSeconds = 0;
+        let timerInterval = null;
+        let hintsLeft = 3;
+        let moveHistory = [];
+        let isPointerDown = false;
+        let dragTargetState = null;
+        let activeCategory = 'all';
+
+        /* --- Level Select & Storage --- */
+
+        function getLevelStatus(id) {
+            const saved = localStorage.getItem(`nonogram_puzzle_${id}`);
+            if (saved) return JSON.parse(saved);
+            return { completed: false, stars: 0 };
+        }
+
+        function saveLevelStatus(id, stars) {
+            localStorage.setItem(`nonogram_puzzle_${id}`, JSON.stringify({
+                completed: true,
+                stars: stars
+            }));
+        }
+
+        function filterCategory(cat) {
+            activeCategory = cat;
+            ['all', '5', '10', '15'].forEach(c => {
+                const btn = document.getElementById(`tab-${c}`);
+                if (c === cat) {
+                    btn.className = "px-3 py-1.5 rounded-lg bg-spooky-orange text-slate-950 transition font-bold";
+                } else {
+                    btn.className = "px-3 py-1.5 rounded-lg text-purple-300 hover:text-white transition font-bold";
+                }
+            });
+            renderLevelSelect();
+        }
+
+        function renderLevelSelect() {
+            const grid = document.getElementById('levels-grid');
+            grid.innerHTML = '';
+
+            let completedCount = 0;
+            let totalStars = 0;
+
+            const filteredPuzzles = PUZZLES.filter(p => {
+                if (activeCategory === '5') return p.size === 5;
+                if (activeCategory === '10') return p.size === 10;
+                if (activeCategory === '15') return p.size === 15;
+                return true;
+            });
+
+            PUZZLES.forEach(p => {
+                const st = getLevelStatus(p.id);
+                if (st.completed) {
+                    completedCount++;
+                    totalStars += (st.stars || 0);
+                }
+            });
+
+            document.getElementById('stats-completed').innerText = completedCount;
+            document.getElementById('stats-stars').innerHTML = `<i class="fa-solid fa-star text-[10px]"></i> ${totalStars}`;
+
+            filteredPuzzles.forEach((p) => {
+                const status = getLevelStatus(p.id);
+                const isCompleted = status.completed;
+
+                const card = document.createElement('div');
+                card.className = `bg-spooky-card border ${isCompleted ? 'border-spooky-green/60' : 'border-purple-900/60'} rounded-2xl p-3.5 flex flex-col justify-between hover:border-spooky-orange transition shadow-xl cursor-pointer group relative overflow-hidden min-h-[115px]`;
+                card.onclick = () => startPuzzle(p.id - 1);
+
+                let starsHtml = '';
+                if (isCompleted) {
+                    const stars = status.stars || 3;
+                    for (let s = 1; s <= 3; s++) {
+                        starsHtml += `<i class="fa-solid fa-star ${s <= stars ? 'text-yellow-400' : 'text-slate-700'} text-[10px]"></i>`;
+                    }
+                }
+
+                card.innerHTML = `
+                    <div class="flex justify-between items-center mb-1">
+                        <span class="text-[11px] font-bold px-2 py-0.5 rounded bg-purple-950 text-purple-300 border border-purple-800">#${p.id}</span>
+                        <span class="text-[11px] font-bold px-2 py-0.5 rounded bg-slate-900 text-purple-400 border border-purple-900">${p.size}x${p.size}</span>
+                    </div>
+                    <div class="flex items-center gap-2.5 my-1.5 group-hover:scale-[1.02] transition-transform">
+                        <div class="w-9 h-9 sm:w-10 sm:h-10 shrink-0 rounded-xl bg-purple-950/80 border border-purple-800 flex items-center justify-center text-lg sm:text-xl text-orange-400 shadow-inner">
+                            <i class="fa-solid ${p.icon}"></i>
+                        </div>
+                        <h3 class="font-bold text-xs sm:text-sm text-slate-100 truncate">${p.name}</h3>
+                    </div>
+                    <div class="flex justify-between items-center mt-1 pt-1.5 border-t border-purple-950/60">
+                        <div class="flex gap-0.5">${starsHtml}</div>
+                        <span class="text-[11px] text-purple-300 group-hover:text-orange-400 font-bold">${isCompleted ? 'Spela' : 'Start'}</span>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        function showLevelSelect() {
+            clearInterval(timerInterval);
+            document.getElementById('level-select-view').classList.remove('hidden');
+            document.getElementById('game-view').classList.add('hidden');
+            renderLevelSelect();
+        }
+
+        /* --- Clues calculation --- */
+
+        function calculateClues(grid) {
+            const size = grid.length;
+            const rowClues = [];
+            const colClues = [];
+
+            for (let r = 0; r < size; r++) {
+                const clues = [];
+                let count = 0;
+                for (let c = 0; c < size; c++) {
+                    if (grid[r][c] === 1) count++;
+                    else if (count > 0) { clues.push(count); count = 0; }
+                }
+                if (count > 0) clues.push(count);
+                if (clues.length === 0) clues.push(0);
+                rowClues.push(clues);
+            }
+
+            for (let c = 0; c < size; c++) {
+                const clues = [];
+                let count = 0;
+                for (let r = 0; r < size; r++) {
+                    if (grid[r][c] === 1) count++;
+                    else if (count > 0) { clues.push(count); count = 0; }
+                }
+                if (count > 0) clues.push(count);
+                if (clues.length === 0) clues.push(0);
+                colClues.push(clues);
+            }
+
+            return { rowClues, colClues };
+        }
+
+        /* --- Gameplay --- */
+
+        function startPuzzle(puzzleIndex) {
+            currentPuzzle = PUZZLES[puzzleIndex];
+            const size = currentPuzzle.size;
+
+            playerGrid = Array(size).fill(0).map(() => Array(size).fill(0));
+            moveHistory = [];
+            moves = 0;
+            timerSeconds = 0;
+            hintsLeft = 3;
+
+            document.getElementById('level-number').innerText = `#${currentPuzzle.id}`;
+            document.getElementById('level-title').innerText = currentPuzzle.name;
+            document.getElementById('level-size').innerText = `${size}x${size}`;
+            document.getElementById('move-counter').innerText = '0';
+            document.getElementById('timer-text').innerText = '00:00';
+            document.getElementById('hint-count').innerText = hintsLeft;
+
+            buildBoard();
+
+            document.getElementById('level-select-view').classList.add('hidden');
+            document.getElementById('game-view').classList.remove('hidden');
+
+            startTimer();
+        }
+
+        function buildBoard() {
+            const board = document.getElementById('nonogram-board');
+            board.innerHTML = '';
+
+            const size = currentPuzzle.size;
+            const { rowClues, colClues } = calculateClues(currentPuzzle.grid);
+
+            let cellSizeClass = 'w-7 h-7 text-xs';
+            if (size === 5) cellSizeClass = 'w-10 h-10 sm:w-11 sm:h-11 text-sm';
+            else if (size === 10) cellSizeClass = 'w-6 h-6 sm:w-8 sm:h-8 text-[11px]';
+            else if (size === 15) cellSizeClass = 'w-4 h-4 sm:w-6 sm:h-6 text-[9px]';
+
+            board.style.gridTemplateColumns = `auto repeat(${size}, minmax(0, 1fr))`;
+
+            const emptyCorner = document.createElement('div');
+            emptyCorner.className = 'bg-transparent border-b-2 border-r-2 border-purple-800/80';
+            board.appendChild(emptyCorner);
+
+            for (let c = 0; c < size; c++) {
+                const colHeader = document.createElement('div');
+                colHeader.className = `flex flex-col justify-end items-center pb-1 text-slate-300 font-bold border-b-2 border-purple-800/80 text-[9px] sm:text-xs bg-purple-950/30 ${c % 5 === 4 && c !== size - 1 ? 'border-r-2 border-r-purple-700/60' : ''}`;
+                colHeader.innerHTML = colClues[c].map(num => `<span>${num}</span>`).join('');
+                board.appendChild(colHeader);
+            }
+
+            for (let r = 0; r < size; r++) {
+                const rowHeader = document.createElement('div');
+                rowHeader.className = `flex justify-end items-center pr-1.5 text-slate-300 font-bold border-r-2 border-purple-800/80 text-[9px] sm:text-xs bg-purple-950/30 gap-0.5 ${r % 5 === 4 && r !== size - 1 ? 'border-b-2 border-b-purple-700/60' : ''}`;
+                rowHeader.innerHTML = rowClues[r].map(num => `<span>${num}</span>`).join(' ');
+                board.appendChild(rowHeader);
+
+                for (let c = 0; c < size; c++) {
+                    const cell = document.createElement('div');
+                    cell.id = `cell-${r}-${c}`;
+                    
+                    let borderClasses = 'border border-purple-900/40';
+                    if (r % 5 === 4 && r !== size - 1) borderClasses += ' border-b-2 border-b-purple-700/60';
+                    if (c % 5 === 4 && c !== size - 1) borderClasses += ' border-r-2 border-r-purple-700/60';
+
+                    cell.className = `cell ${cellSizeClass} ${borderClasses} bg-purple-950/60 flex items-center justify-center cursor-pointer select-none rounded-xs`;
+
+                    cell.addEventListener('pointerdown', (e) => handlePointerDown(e, r, c));
+                    cell.addEventListener('pointerenter', (e) => handlePointerEnter(e, r, c));
+
+                    board.appendChild(cell);
+                }
+            }
+
+            window.onpointerup = () => {
+                isPointerDown = false;
+                dragTargetState = null;
+            };
+        }
+
+        /* --- Touch & Click Handlers --- */
+
+        function setInteractionMode(mode) {
+            currentMode = mode;
+            const fillBtn = document.getElementById('mode-fill-btn');
+            const crossBtn = document.getElementById('mode-cross-btn');
+
+            if (mode === 'fill') {
+                fillBtn.className = 'flex-1 px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all shadow-md bg-spooky-orange text-slate-950';
+                crossBtn.className = 'flex-1 px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all text-purple-300 hover:text-white';
+            } else {
+                crossBtn.className = 'flex-1 px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all shadow-md bg-purple-700 text-white';
+                fillBtn.className = 'flex-1 px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all text-purple-300 hover:text-white';
+            }
+        }
+
+        function handlePointerDown(e, r, c) {
+            e.preventDefault();
+            isPointerDown = true;
+            saveMoveState();
+
+            const currentState = playerGrid[r][c];
+            if (currentMode === 'fill') {
+                dragTargetState = currentState === 1 ? 0 : 1;
+            } else {
+                dragTargetState = currentState === 2 ? 0 : 2;
+            }
+            applyCellState(r, c, dragTargetState);
+        }
+
+        function handlePointerEnter(e, r, c) {
+            if (!isPointerDown || dragTargetState === null) return;
+            applyCellState(r, c, dragTargetState);
+        }
+
+        function applyCellState(r, c, newState) {
+            if (playerGrid[r][c] === newState) return;
+
+            playerGrid[r][c] = newState;
+            moves++;
+            document.getElementById('move-counter').innerText = moves;
+
+            updateCellUI(r, c);
+
+            if (newState === 1) playSound('fill');
+            else if (newState === 2) playSound('cross');
+            else playSound('clear');
+
+            checkWinCondition();
+        }
+
+        function updateCellUI(r, c) {
+            const cell = document.getElementById(`cell-${r}-${c}`);
+            if (!cell) return;
+
+            const state = playerGrid[r][c];
+            cell.innerHTML = '';
+
+            if (state === 1) {
+                cell.className = cell.className.replace(/bg-\S+/g, '') + ' bg-spooky-orange shadow-inner';
+            } else if (state === 2) {
+                cell.className = cell.className.replace(/bg-\S+/g, '') + ' bg-purple-950/40 text-purple-400';
+                cell.innerHTML = '<i class="fa-solid fa-xmark"></i>';
+            } else {
+                cell.className = cell.className.replace(/bg-\S+/g, '') + ' bg-purple-950/60';
+            }
+        }
+
+        function saveMoveState() {
+            const snapshot = playerGrid.map(row => [...row]);
+            moveHistory.push(snapshot);
+            if (moveHistory.length > 25) moveHistory.shift();
+        }
+
+        function undoMove() {
+            if (moveHistory.length === 0) return;
+            playerGrid = moveHistory.pop();
+            for (let r = 0; r < currentPuzzle.size; r++) {
+                for (let c = 0; c < currentPuzzle.size; c++) {
+                    updateCellUI(r, c);
+                }
+            }
+            playSound('clear');
+        }
+
+        function resetPuzzle() {
+            saveMoveState();
+            const size = currentPuzzle.size;
+            playerGrid = Array(size).fill(0).map(() => Array(size).fill(0));
+            for (let r = 0; r < size; r++) {
+                for (let c = 0; c < size; c++) {
+                    updateCellUI(r, c);
+                }
+            }
+            playSound('clear');
+        }
+
+        function useHint() {
+            if (hintsLeft <= 0) return;
+            const size = currentPuzzle.size;
+            const incorrectCells = [];
+
+            for (let r = 0; r < size; r++) {
+                for (let c = 0; c < size; c++) {
+                    const target = currentPuzzle.grid[r][c];
+                    const current = playerGrid[r][c];
+                    if ((target === 1 && current !== 1) || (target === 0 && current === 1)) {
+                        incorrectCells.push({ r, c, correct: target });
+                    }
+                }
+            }
+
+            if (incorrectCells.length === 0) return;
+
+            const pick = incorrectCells[Math.floor(Math.random() * incorrectCells.length)];
+            saveMoveState();
+            playerGrid[pick.r][pick.c] = pick.correct === 1 ? 1 : 2;
+            updateCellUI(pick.r, pick.c);
+
+            hintsLeft--;
+            document.getElementById('hint-count').innerText = hintsLeft;
+            playSound('hint');
+            checkWinCondition();
+        }
+
+        function startTimer() {
+            clearInterval(timerInterval);
+            timerInterval = setInterval(() => {
+                timerSeconds++;
+                const mins = String(Math.floor(timerSeconds / 60)).padStart(2, '0');
+                const secs = String(timerSeconds % 60).padStart(2, '0');
+                document.getElementById('timer-text').innerText = `${mins}:${secs}`;
+            }, 1000);
+        }
+
+        /* --- Win Logic --- */
+
+        function checkWinCondition() {
+            const size = currentPuzzle.size;
+            for (let r = 0; r < size; r++) {
+                for (let c = 0; c < size; c++) {
+                    const expected = currentPuzzle.grid[r][c];
+                    const actual = playerGrid[r][c] === 1 ? 1 : 0;
+                    if (expected !== actual) return false;
+                }
+            }
+
+            clearInterval(timerInterval);
+            
+            let stars = 3;
+            if (hintsLeft < 3 || timerSeconds > size * 20) stars = 2;
+            if (hintsLeft < 1 || timerSeconds > size * 40) stars = 1;
+
+            saveLevelStatus(currentPuzzle.id, stars);
+            playSound('win');
+            setTimeout(() => showWinModal(stars), 350);
+            return true;
+        }
+
+        function showWinModal(stars) {
+            const modal = document.getElementById('win-modal');
+            const card = document.getElementById('win-modal-card');
+
+            document.getElementById('win-time').innerText = document.getElementById('timer-text').innerText;
+            document.getElementById('win-moves').innerText = moves;
+
+            const starsContainer = document.getElementById('win-stars');
+            starsContainer.innerHTML = '';
+            for (let s = 1; s <= 3; s++) {
+                starsContainer.innerHTML += `<i class="fa-solid fa-star ${s <= stars ? 'text-yellow-400' : 'text-slate-700'}"></i>`;
+            }
+
+            const resultContainer = document.getElementById('win-colored-result');
+            resultContainer.innerHTML = '';
+            const size = currentPuzzle.size;
+            const pixelGrid = document.createElement('div');
+            pixelGrid.className = 'grid gap-0.5';
+            pixelGrid.style.gridTemplateColumns = `repeat(${size}, minmax(0, 1fr))`;
+
+            const cellSize = size === 15 ? 'w-2.5 h-2.5' : 'w-4 h-4';
+
+            for (let r = 0; r < size; r++) {
+                for (let c = 0; c < size; c++) {
+                    const px = document.createElement('div');
+                    px.className = `${cellSize} rounded-xs`;
+                    px.style.backgroundColor = currentPuzzle.grid[r][c] === 1 ? currentPuzzle.colors.fill : currentPuzzle.colors.bg;
+                    pixelGrid.appendChild(px);
+                }
+            }
+            resultContainer.appendChild(pixelGrid);
+
+            const nextBtn = document.getElementById('next-btn');
+            if (currentPuzzle.id < 50) {
+                nextBtn.classList.remove('hidden');
+            } else {
+                nextBtn.classList.add('hidden');
+            }
+
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                card.classList.remove('scale-95', 'opacity-0');
+                card.classList.add('scale-100', 'opacity-100');
+            }, 40);
+        }
+
+        function hideWinModal() {
+            const modal = document.getElementById('win-modal');
+            const card = document.getElementById('win-modal-card');
+            card.classList.remove('scale-100', 'opacity-100');
+            card.classList.add('scale-95', 'opacity-0');
+            setTimeout(() => modal.classList.add('hidden'), 180);
+        }
+
+        function nextLevel() {
+            hideWinModal();
+            if (currentPuzzle.id < 50) {
+                startPuzzle(currentPuzzle.id);
+            } else {
+                showLevelSelect();
+            }
+        }
+
+        function showHelp() {
+            document.getElementById('help-modal').classList.remove('hidden');
+        }
+
+        function hideHelp() {
+            document.getElementById('help-modal').classList.add('hidden');
+        }
+
+        function initBackgroundEffects() {
+            const container = document.getElementById('bat-container');
+            container.innerHTML = '';
+            for (let i = 0; i < 8; i++) {
+                const bat = document.createElement('div');
+                bat.className = 'bat';
+                // Bytt ut fa-bat mot fa-ghost i bakgrunden för att garantera FA6 Free kompatibilitet
+                bat.innerHTML = '<i class="fa-solid fa-ghost"></i>';
+                bat.style.left = `${Math.random() * -20}vw`;
+                bat.style.top = `${Math.random() * 80 + 10}vh`;
+                bat.style.animationDelay = `${Math.random() * 12}s`;
+                bat.style.fontSize = `${Math.random() * 18 + 14}px`;
+                container.appendChild(bat);
+            }
+        }
+
+        window.onload = () => {
+            initBackgroundEffects();
+            showLevelSelect();
+        };
+    </script>
+</body>
+</html>

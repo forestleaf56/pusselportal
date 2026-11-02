@@ -1,0 +1,1582 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Tomtens Torn - Juligt Skyskrapspussel</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Mountains+of+Christmas:wght@700&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-deep-winter: #0c1829;
+            --gingerbread-border: #7c2d12;
+            --gingerbread-fill: #9a3412;
+            --gold-accent: #fbbf24;
+            --snow-white: #f8fafc;
+        }
+
+        body {
+            font-family: 'Nunito', sans-serif;
+            background: radial-gradient(circle at top center, #1e3a5f 0%, #0b1526 70%, #060b13 100%);
+            color: #f1f5f9;
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .font-christmas {
+            font-family: 'Mountains of Christmas', cursive;
+        }
+
+        /* Snöflingor i bakgrunden */
+        #snow-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        /* Rutnätsstil för Skyskrapor */
+        .board-grid {
+            display: grid;
+            gap: 4px;
+            padding: 8px;
+            background: rgba(30, 15, 10, 0.7);
+            border: 3px solid #b45309;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.6), inset 0 0 20px rgba(180, 83, 9, 0.3);
+            border-radius: 16px;
+            position: relative;
+        }
+
+        .cell {
+            aspect-ratio: 1 / 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            cursor: pointer;
+            position: relative;
+            transition: all 0.15s ease-out;
+            border-radius: 8px;
+            background: rgba(254, 243, 199, 0.08);
+            border: 1px solid rgba(251, 191, 36, 0.2);
+            color: #fef3c7;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.6);
+        }
+
+        .cell:hover {
+            background: rgba(254, 243, 199, 0.2);
+            transform: scale(0.98);
+        }
+
+        .cell.selected {
+            outline: 3px solid #fbbf24;
+            outline-offset: -2px;
+            background: rgba(251, 191, 36, 0.3) !important;
+            box-shadow: 0 0 15px rgba(251, 191, 36, 0.5);
+        }
+
+        .cell.highlight-same {
+            background: rgba(56, 189, 248, 0.25);
+            border-color: #38bdf8;
+        }
+
+        .cell.error-conflict {
+            background: rgba(239, 68, 68, 0.35) !important;
+            border-color: #ef4444 !important;
+            color: #fca5a5 !important;
+            animation: pulse-err 0.8s infinite alternate;
+        }
+
+        @keyframes pulse-err {
+            from { transform: scale(1); }
+            to { transform: scale(0.96); }
+        }
+
+        /* Kantledtrådar */
+        .clue {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 900;
+            color: #f59e0b;
+            font-size: 1.15rem;
+            text-shadow: 0 0 8px rgba(245, 158, 11, 0.6);
+        }
+
+        .clue.satisfied {
+            color: #34d399;
+            text-shadow: 0 0 10px rgba(52, 211, 153, 0.8);
+        }
+
+        .clue.unsatisfied-full {
+            color: #f87171;
+            text-shadow: 0 0 10px rgba(248, 113, 113, 0.8);
+        }
+
+        .clue.empty-corner {
+            background: transparent;
+        }
+
+        /* Noter i cell */
+        .notes-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            grid-template-rows: repeat(3, 1fr);
+            width: 100%;
+            height: 100%;
+            padding: 2px;
+            pointer-events: none;
+        }
+
+        .note-num {
+            font-size: 0.65rem;
+            font-weight: 700;
+            color: #93c5fd;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            line-height: 1;
+        }
+
+        /* Julknappar & paneler */
+        .btn-holiday {
+            background: linear-gradient(135deg, #b91c1c 0%, #7f1d1d 100%);
+            border: 2px solid #ef4444;
+            box-shadow: 0 4px 10px rgba(185, 28, 28, 0.4), inset 0 1px 1px rgba(255,255,255,0.3);
+            transition: all 0.15s ease;
+        }
+
+        .btn-holiday:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 14px rgba(185, 28, 28, 0.6);
+            filter: brightness(1.1);
+        }
+
+        .btn-holiday:active {
+            transform: translateY(1px);
+        }
+
+        .btn-green {
+            background: linear-gradient(135deg, #15803d 0%, #14532d 100%);
+            border: 2px solid #22c55e;
+            box-shadow: 0 4px 10px rgba(21, 128, 61, 0.4);
+        }
+
+        .btn-green:hover {
+            filter: brightness(1.1);
+            transform: translateY(-2px);
+        }
+
+        .btn-amber {
+            background: linear-gradient(135deg, #d97706 0%, #92400e 100%);
+            border: 2px solid #f59e0b;
+            box-shadow: 0 4px 10px rgba(217, 119, 6, 0.4);
+        }
+
+        .btn-amber:hover {
+            filter: brightness(1.1);
+            transform: translateY(-2px);
+        }
+
+        /* Scrollbars i banväljare */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.6);
+            border-radius: 8px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #b45309;
+            border-radius: 8px;
+        }
+
+        /* 3D-liknande torn-dekoration under siffror */
+        .tower-height-bar {
+            position: absolute;
+            bottom: 2px;
+            left: 10%;
+            height: 3px;
+            border-radius: 2px;
+            background: linear-gradient(90deg, #fbbf24, #f59e0b);
+            box-shadow: 0 0 4px #fbbf24;
+        }
+
+        .shimmer {
+            background: linear-gradient(90deg, #fff 0%, #fef08a 50%, #fff 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+    </style>
+</head>
+<body class="relative flex flex-col justify-between items-center p-2 sm:p-4 min-h-screen">
+    <canvas id="snow-canvas"></canvas>
+
+    <!-- Header / Top Bar -->
+    <header class="w-full max-w-lg z-10 flex flex-col items-center">
+        <div class="flex items-center justify-between w-full px-2 py-1">
+            <button id="btn-open-levels" class="px-3 py-1.5 rounded-xl bg-amber-950/80 border border-amber-600/70 text-amber-200 text-xs sm:text-sm font-bold flex items-center gap-1.5 shadow-md active:scale-95 transition">
+                <span>🎄</span>
+                <span id="level-indicator-btn">Bana 1 / 500</span>
+                <span>▼</span>
+            </button>
+
+            <div class="flex items-center gap-2">
+                <button id="btn-sound-toggle" class="p-2 rounded-xl bg-slate-800/80 border border-slate-600 text-amber-300 text-sm shadow hover:bg-slate-700 active:scale-95 transition" title="Ljud av/på">
+                    🔔
+                </button>
+                <button id="btn-rules" class="p-2 rounded-xl bg-slate-800/80 border border-slate-600 text-amber-300 text-sm shadow hover:bg-slate-700 active:scale-95 transition" title="Regler & Hjälp">
+                    ❓
+                </button>
+            </div>
+        </div>
+
+        <div class="text-center my-1">
+            <h1 class="text-3xl sm:text-4xl font-christmas font-bold tracking-wider text-amber-300 drop-shadow-[0_3px_5px_rgba(0,0,0,0.8)] flex items-center justify-center gap-2">
+                <span>🎅</span> Tomtens Torn <span>🎄</span>
+            </h1>
+            <p id="world-badge" class="text-xs sm:text-sm font-semibold tracking-wide text-amber-200/90 -mt-1">
+                Värld 1: Pepparkaksbyn (4x4)
+            </p>
+        </div>
+
+        <!-- Timer & Statistik bar -->
+        <div class="flex items-center justify-between w-full bg-slate-900/60 backdrop-blur-md px-4 py-2 rounded-2xl border border-amber-500/20 shadow-inner mt-1 text-xs sm:text-sm">
+            <div class="flex items-center gap-1.5">
+                <span class="text-amber-400">⏱️</span>
+                <span id="timer-display" class="font-mono font-bold text-slate-100">00:00</span>
+            </div>
+            <div class="flex items-center gap-1">
+                <span class="text-amber-400">⭐</span>
+                <span id="stars-display" class="font-bold text-amber-300">0 / 1500</span>
+            </div>
+            <div class="flex items-center gap-1 text-slate-300">
+                <span>Fel:</span>
+                <span id="errors-count" class="font-bold text-red-400">0</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Game Board Area -->
+    <main class="w-full max-w-lg z-10 flex flex-col items-center justify-center my-auto py-2">
+        <!-- Spelbrädet -->
+        <div id="board-container" class="w-full max-w-[380px] sm:max-w-[420px] aspect-square p-1 flex items-center justify-center relative">
+            <div id="skyscrapers-board" class="board-grid w-full h-full">
+                <!-- Rutnätet injiceras här -->
+            </div>
+        </div>
+
+        <!-- Funktionsknappar (Ångra, Penna, Ledtråd, Rensa) -->
+        <div class="grid grid-cols-4 gap-2 w-full max-w-md px-2 mt-2">
+            <button id="btn-undo" class="py-2 px-1 rounded-xl bg-slate-800/90 border border-slate-600 hover:bg-slate-700 active:scale-95 text-xs sm:text-sm font-bold flex flex-col items-center justify-center text-slate-200 transition shadow">
+                <span class="text-base sm:text-lg">↩️</span>
+                <span>Ångra</span>
+            </button>
+            <button id="btn-notes" class="py-2 px-1 rounded-xl bg-slate-800/90 border border-slate-600 hover:bg-slate-700 active:scale-95 text-xs sm:text-sm font-bold flex flex-col items-center justify-center text-slate-200 transition shadow">
+                <span id="note-icon" class="text-base sm:text-lg opacity-60">✏️</span>
+                <span id="note-text" class="text-slate-300">Penna: Av</span>
+            </button>
+            <button id="btn-hint" class="py-2 px-1 rounded-xl bg-slate-800/90 border border-slate-600 hover:bg-slate-700 active:scale-95 text-xs sm:text-sm font-bold flex flex-col items-center justify-center text-amber-300 transition shadow">
+                <span class="text-base sm:text-lg">🎁</span>
+                <span>Ledtråd</span>
+            </button>
+            <button id="btn-clear" class="py-2 px-1 rounded-xl bg-slate-800/90 border border-slate-600 hover:bg-slate-700 active:scale-95 text-xs sm:text-sm font-bold flex flex-col items-center justify-center text-rose-300 transition shadow">
+                <span class="text-base sm:text-lg">🧹</span>
+                <span>Töm ruta</span>
+            </button>
+        </div>
+
+        <!-- Sifferplatta (Numpad) anpassas efter storlek (1..N) -->
+        <div id="numpad-container" class="flex items-center justify-center gap-2 sm:gap-3 w-full max-w-md px-2 mt-3">
+            <!-- Numpad-knappar genereras dynamiskt efter brädstorlek (4, 5, eller 6) -->
+        </div>
+    </main>
+
+    <!-- Footer / Navigationssnabbknappar -->
+    <footer class="w-full max-w-lg z-10 flex items-center justify-between px-3 py-2 text-xs text-amber-200/70 border-t border-amber-900/30">
+        <button id="btn-prev-level" class="px-3 py-1 rounded-lg bg-amber-950/40 border border-amber-700/40 hover:bg-amber-900/60 active:scale-95 flex items-center gap-1 font-semibold">
+            ◀ Föregående
+        </button>
+        <span class="italic font-christmas text-base text-amber-300">God Jul & Klurigt Pusslande</span>
+        <button id="btn-next-level" class="px-3 py-1 rounded-lg bg-amber-950/40 border border-amber-700/40 hover:bg-amber-900/60 active:scale-95 flex items-center gap-1 font-semibold">
+            Nästa ▶
+        </button>
+    </footer>
+
+    <!-- MODAL: Banväljare (500 banor i 3 julvärldar) -->
+    <div id="modal-levels" class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-3 hidden opacity-0 transition-opacity duration-200">
+        <div class="bg-gradient-to-b from-slate-900 via-stone-900 to-amber-950 border-2 border-amber-600 rounded-3xl w-full max-w-xl max-h-[88vh] flex flex-col overflow-hidden shadow-2xl">
+            <!-- Modal Header -->
+            <div class="p-4 border-b border-amber-700/40 flex items-center justify-between bg-amber-950/50">
+                <div>
+                    <h2 class="text-2xl font-christmas font-bold text-amber-300">🎄 Välj Bana (1 – 500)</h2>
+                    <p class="text-xs text-amber-100/70">Lås upp stjärnor och hjälp tomten bygga tornen</p>
+                </div>
+                <button id="btn-close-levels" class="w-8 h-8 rounded-full bg-red-950 border border-red-500 text-red-200 flex items-center justify-center font-bold text-lg hover:bg-red-800 transition">
+                    ✕
+                </button>
+            </div>
+
+            <!-- Världsflikar -->
+            <div class="grid grid-cols-3 border-b border-amber-800/40 bg-black/40 p-2 gap-2 text-xs">
+                <button class="world-tab min-h-[52px] py-1.5 px-1 rounded-xl text-center transition flex flex-col items-center justify-center border border-amber-500/50 bg-amber-600 text-stone-900 font-extrabold shadow-md leading-tight" data-world="1">
+                    <span class="text-xs sm:text-sm font-bold flex items-center gap-1">🏡 Byn</span>
+                    <span class="text-[10px] font-normal opacity-90 mt-0.5">1-150 • 4x4</span>
+                </button>
+                <button class="world-tab min-h-[52px] py-1.5 px-1 rounded-xl text-center transition flex flex-col items-center justify-center border border-slate-700 bg-slate-800/90 text-slate-300 font-bold hover:bg-slate-700 leading-tight" data-world="2">
+                    <span class="text-xs sm:text-sm font-bold flex items-center gap-1">🎁 Verkstan</span>
+                    <span class="text-[10px] font-normal opacity-70 mt-0.5">151-350 • 5x5</span>
+                </button>
+                <button class="world-tab min-h-[52px] py-1.5 px-1 rounded-xl text-center transition flex flex-col items-center justify-center border border-slate-700 bg-slate-800/90 text-slate-300 font-bold hover:bg-slate-700 leading-tight" data-world="3">
+                    <span class="text-xs sm:text-sm font-bold flex items-center gap-1">❄️ Nordpolen</span>
+                    <span class="text-[10px] font-normal opacity-70 mt-0.5">351-500 • 6x6</span>
+                </button>
+            </div>
+
+            <!-- Sök / Snabbhopp -->
+            <div class="p-3 bg-slate-900/60 border-b border-amber-800/30 flex items-center gap-2">
+                <span class="text-xs text-amber-200">Hoppa till:</span>
+                <input id="jump-level-input" type="number" min="1" max="500" placeholder="1 - 500" class="w-24 px-2 py-1 rounded bg-black/50 border border-amber-600/50 text-amber-100 text-sm outline-none focus:border-amber-400">
+                <button id="btn-jump-level" class="px-3 py-1 rounded bg-amber-600 text-black text-xs font-bold hover:bg-amber-500">Gå</button>
+                <span class="text-[11px] text-amber-300/60 ml-auto" id="world-progress-text">Klara: 0 / 150</span>
+            </div>
+
+            <!-- Ban-grid med virtuell/optimerad render -->
+            <div id="levels-grid-container" class="flex-1 overflow-y-auto p-4 grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-2.5">
+                <!-- Knappar för banorna genereras här -->
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: Regler & Guide -->
+    <div id="modal-rules" class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden opacity-0 transition-opacity duration-200">
+        <div class="bg-gradient-to-b from-stone-900 to-amber-950 border-2 border-amber-500 rounded-3xl w-full max-w-lg p-5 flex flex-col shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center pb-3 border-b border-amber-600/40">
+                <h2 class="text-2xl font-christmas font-bold text-amber-300">📖 Hur Spelar Man Torn?</h2>
+                <button id="btn-close-rules" class="w-8 h-8 rounded-full bg-red-950 border border-red-500 text-red-200 flex items-center justify-center font-bold hover:bg-red-800 transition">✕</button>
+            </div>
+            
+            <div class="space-y-3.5 my-4 text-xs sm:text-sm text-slate-200 leading-relaxed">
+                <div class="flex items-start gap-3 bg-black/30 p-3 rounded-2xl border border-amber-900/50">
+                    <span class="text-2xl">🏙️</span>
+                    <div>
+                        <strong class="text-amber-300 block mb-0.5">Bygg Tornen:</strong>
+                        På varje ruta ska ett torn med en specifik höjd byggas (t.ex. 1 till 4 för ett 4x4-bräde). Varje rad och kolumn måste innehålla varje siffra exakt en gång (precis som i Sudoku).
+                    </div>
+                </div>
+
+                <div class="flex items-start gap-3 bg-black/30 p-3 rounded-2xl border border-amber-900/50">
+                    <span class="text-2xl">👀</span>
+                    <div>
+                        <strong class="text-amber-300 block mb-0.5">Sikt och Siffror i Kanten:</strong>
+                        Siffrorna längs med kanterna visar <em>hur många torn tomten kan se</em> när han tittar in från den riktningen. Ett högre torn döljer alltid alla lägre torn bakom sig!
+                    </div>
+                </div>
+
+                <div class="flex items-start gap-3 bg-black/30 p-3 rounded-2xl border border-amber-900/50">
+                    <span class="text-2xl">💡</span>
+                    <div>
+                        <strong class="text-amber-300 block mb-0.5">Exempel:</strong>
+                        Ser du en <strong>1</strong> i kanten, måste det högsta tornet stå allra längst fram vid kanten (annars skulle du se minst två). Ser du siffran <strong>4</strong> på en 4x4-rad måste tornen komma i stigande ordning: 1, 2, 3, 4!
+                    </div>
+                </div>
+
+                <div class="flex items-start gap-3 bg-black/30 p-3 rounded-2xl border border-amber-900/50">
+                    <span class="text-2xl">✏️</span>
+                    <div>
+                        <strong class="text-amber-300 block mb-0.5">Penn-läge & Ledtrådar:</strong>
+                        Aktivera <em>Penna</em> för att anteckna möjliga tornhöjder i rutorna om du är osäker. Fastnar du? Tryck på <em>Ledtråd (🎁)</em>!
+                    </div>
+                </div>
+            </div>
+
+            <button id="btn-close-rules-confirm" class="w-full py-3 rounded-2xl btn-holiday font-bold text-white text-sm shadow-lg tracking-wide uppercase mt-2">
+                Jag förstår, låt oss bygga! 🎅
+            </button>
+        </div>
+    </div>
+
+    <!-- MODAL: Vinst / Grattis -->
+    <div id="modal-victory" class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden opacity-0 transition-opacity duration-300">
+        <div class="bg-gradient-to-b from-emerald-950 via-stone-900 to-amber-950 border-2 border-amber-400 rounded-3xl w-full max-w-sm p-6 flex flex-col items-center text-center shadow-2xl relative overflow-hidden">
+            <div class="absolute -top-10 -right-10 w-32 h-32 bg-amber-400/10 rounded-full blur-2xl pointer-events-none"></div>
+
+            <div class="text-5xl my-2 animate-bounce">🎁</div>
+            <h2 class="text-3xl font-christmas font-bold text-amber-300 mb-1">Fantastiskt Jobbat!</h2>
+            <p class="text-xs text-amber-100 mb-4" id="victory-subtitle">Tomtens bybor jublar!</p>
+
+            <!-- Stjärnor -->
+            <div class="flex items-center justify-center gap-2 text-3xl my-2" id="victory-stars">
+                <span>⭐</span><span>⭐</span><span>⭐</span>
+            </div>
+
+            <!-- Detaljer -->
+            <div class="bg-black/40 rounded-2xl p-3 w-full my-3 border border-amber-800/40 text-xs space-y-1">
+                <div class="flex justify-between text-slate-300">
+                    <span>Tid:</span>
+                    <strong class="text-amber-300" id="victory-time">01:23</strong>
+                </div>
+                <div class="flex justify-between text-slate-300">
+                    <span>Felaktiga drag:</span>
+                    <strong class="text-red-400" id="victory-errors">0</strong>
+                </div>
+                <div class="flex justify-between text-slate-300">
+                    <span>Ledtrådar använda:</span>
+                    <strong class="text-amber-200" id="victory-hints">0</strong>
+                </div>
+            </div>
+
+            <div class="flex gap-2 w-full mt-2">
+                <button id="btn-replay-level" class="flex-1 py-2.5 rounded-xl bg-slate-800 border border-slate-600 font-bold text-xs text-slate-200 hover:bg-slate-700 transition">
+                    🔄 Spela om
+                </button>
+                <button id="btn-next-victory" class="flex-1 py-2.5 rounded-xl btn-green font-bold text-xs text-white shadow-lg transition">
+                    Nästa Bana ▶
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- AUDIO ENGINE & SPELLOGIK -->
+    <script>
+        /* ==========================================================================
+           1. LJUDEFFEKTER MED WEB AUDIO API (Utan externa filer)
+           ========================================================================== */
+        class HolidayAudio {
+            constructor() {
+                this.ctx = null;
+                this.enabled = true;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    const AudioContext = window.AudioContext || window.webkitAudioContext;
+                    this.ctx = new AudioContext();
+                }
+                if (this.ctx && this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+            }
+
+            playJingleBell() {
+                if (!this.enabled) return;
+                this.init();
+                const now = this.ctx.currentTime;
+                // Skapa en skimrande julklocka med fm-syntes/övertoner
+                const freqs = [1760, 2637, 3520]; // A6, E7, A7
+                freqs.forEach((f, idx) => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(f + (Math.random() * 20 - 10), now);
+                    
+                    gain.gain.setValueAtTime(0.08 / (idx + 1), now);
+                    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.4 + idx * 0.15);
+                    
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(now);
+                    osc.stop(now + 0.6);
+                });
+            }
+
+            playPop(num = 1) {
+                if (!this.enabled) return;
+                this.init();
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'triangle';
+                const baseFreq = 260 + num * 60;
+                osc.frequency.setValueAtTime(baseFreq, now);
+                osc.frequency.exponentialRampToValueAtTime(baseFreq * 1.5, now + 0.08);
+
+                gain.gain.setValueAtTime(0.15, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.09);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.1);
+            }
+
+            playErase() {
+                if (!this.enabled) return;
+                this.init();
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(320, now);
+                osc.frequency.exponentialRampToValueAtTime(120, now + 0.12);
+
+                gain.gain.setValueAtTime(0.1, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.13);
+            }
+
+            playError() {
+                if (!this.enabled) return;
+                this.init();
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(140, now);
+                osc.frequency.linearRampToValueAtTime(90, now + 0.2);
+
+                gain.gain.setValueAtTime(0.12, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.23);
+            }
+
+            playVictoryFanfare() {
+                if (!this.enabled) return;
+                this.init();
+                // Spela klassisk "Jingle bells" öppning (E, E, E) eller glad julkadens
+                const notes = [
+                    { f: 523.25, d: 0.15, pause: 0.0 }, // C5
+                    { f: 659.25, d: 0.15, pause: 0.15 }, // E5
+                    { f: 783.99, d: 0.18, pause: 0.30 }, // G5
+                    { f: 1046.50, d: 0.45, pause: 0.48 } // C6
+                ];
+
+                const now = this.ctx.currentTime;
+                notes.forEach(n => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(n.f, now + n.pause);
+                    gain.gain.setValueAtTime(0.2, now + n.pause);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + n.pause + n.d);
+
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(now + n.pause);
+                    osc.stop(now + n.pause + n.d + 0.05);
+                });
+            }
+        }
+
+        const sound = new HolidayAudio();
+
+        /* ==========================================================================
+           2. PROCEDUR-MOTOR FÖR 500 DETERMINISTISKA PUSSEL (SEEDED PRNG)
+           ========================================================================== */
+        class Mulberry32 {
+            constructor(seed) {
+                this.seed = seed;
+            }
+            next() {
+                var t = this.seed += 0x6D2B79F5;
+                t = Math.imul(t ^ t >>> 15, t | 1);
+                t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+                return ((t ^ t >>> 14) >>> 0) / 4294967296;
+            }
+            nextInt(min, max) {
+                return Math.floor(this.next() * (max - min + 1)) + min;
+            }
+            shuffle(array) {
+                for (let i = array.length - 1; i > 0; i--) {
+                    const j = Math.floor(this.next() * (i + 1));
+                    [array[i], array[j]] = [array[j], array[i]];
+                }
+                return array;
+            }
+        }
+
+        /**
+         * Räknar synliga torn i en vektor
+         */
+        function countVisibleTowers(arr) {
+            let visible = 0;
+            let maxHeight = 0;
+            for (let i = 0; i < arr.length; i++) {
+                if (arr[i] > maxHeight) {
+                    visible++;
+                    maxHeight = arr[i];
+                }
+            }
+            return visible;
+        }
+
+        /**
+         * Genererar ett giltigt latin square och ledtrådar för en specifik bana (1-500)
+         */
+        function generatePuzzleData(levelNumber) {
+            // Bestäm storlek baserat på nivå:
+            // 1 - 150: 4x4 (Pepparkaksbyn)
+            // 151 - 350: 5x5 (Tomteverkstan)
+            // 351 - 500: 6x6 (Nordpolen)
+            let size = 4;
+            if (levelNumber > 150 && levelNumber <= 350) size = 5;
+            if (levelNumber > 350) size = 6;
+
+            const rng = new Mulberry32(levelNumber * 7919 + 1337);
+
+            // Skapa ett giltigt latinskt kvadrat genom permutationer
+            let grid = [];
+            for (let r = 0; r < size; r++) {
+                grid[r] = [];
+                for (let c = 0; c < size; c++) {
+                    grid[r][c] = ((r + c) % size) + 1;
+                }
+            }
+
+            // Permutera rader och kolumner deterministiskt
+            const rowOrder = rng.shuffle([...Array(size).keys()]);
+            const colOrder = rng.shuffle([...Array(size).keys()]);
+            const numMap = rng.shuffle([...Array(size).keys()].map(x => x + 1));
+
+            let finalSolution = Array.from({ length: size }, () => Array(size).fill(0));
+            for (let r = 0; r < size; r++) {
+                for (let c = 0; c < size; c++) {
+                    const val = grid[rowOrder[r]][colOrder[c]];
+                    finalSolution[r][c] = numMap[val - 1];
+                }
+            }
+
+            // Beräkna ledtrådar: TOP, BOTTOM, LEFT, RIGHT
+            let topClues = [];
+            let bottomClues = [];
+            let leftClues = [];
+            let rightClues = [];
+
+            for (let c = 0; c < size; c++) {
+                const colVals = [];
+                for (let r = 0; r < size; r++) colVals.push(finalSolution[r][c]);
+                topClues.push(countVisibleTowers(colVals));
+                bottomClues.push(countVisibleTowers([...colVals].reverse()));
+            }
+
+            for (let r = 0; r < size; r++) {
+                const rowVals = [...finalSolution[r]];
+                leftClues.push(countVisibleTowers(rowVals));
+                rightClues.push(countVisibleTowers([...rowVals].reverse()));
+            }
+
+            // På lättare banor ger vi några förfyllda rutor
+            let initialBoard = Array.from({ length: size }, () => Array(size).fill(0));
+            let givensCount = 0;
+            if (size === 4) givensCount = (levelNumber <= 30) ? 2 : (levelNumber <= 75 ? 1 : 0);
+            if (size === 5) givensCount = (levelNumber <= 200) ? 2 : (levelNumber <= 270 ? 1 : 0);
+            if (size === 6) givensCount = (levelNumber <= 400) ? 2 : (levelNumber <= 460 ? 1 : 0);
+
+            let allCells = [];
+            for (let r = 0; r < size; r++) {
+                for (let c = 0; c < size; c++) {
+                    allCells.push({ r, c });
+                }
+            }
+            rng.shuffle(allCells);
+            for (let i = 0; i < givensCount; i++) {
+                const { r, c } = allCells[i];
+                initialBoard[r][c] = finalSolution[r][c];
+            }
+
+            return {
+                levelNumber,
+                size,
+                solution: finalSolution,
+                initial: initialBoard,
+                clues: {
+                    top: topClues,
+                    bottom: bottomClues,
+                    left: leftClues,
+                    right: rightClues
+                }
+            };
+        }
+
+        /* ==========================================================================
+           3. SPELTILLSTÅND OCH SPARANDE (LOCALSTORAGE)
+           ========================================================================== */
+        const STORAGE_KEY = 'tomtens_torn_save_v1';
+
+        class GameState {
+            constructor() {
+                this.currentLevel = 1;
+                this.puzzle = null;
+                this.board = [];       // Spelarens nummer [r][c]
+                this.notes = [];       // Spelarens pennanteckningar [r][c] = Set()
+                this.givens = [];      // Förifyllda rutor boolean [r][c]
+                this.selectedCell = null; // {r, c}
+                this.isNoteMode = false;
+                this.history = [];     // För Ångra (Undo)
+                this.timerSeconds = 0;
+                this.timerInterval = null;
+                this.hintsUsed = 0;
+                this.errorsCount = 0;
+
+                // Sparad spelardata
+                this.userData = this.loadUserData();
+            }
+
+            loadUserData() {
+                try {
+                    const data = localStorage.getItem(STORAGE_KEY);
+                    if (data) return JSON.parse(data);
+                } catch (e) {
+                    console.error("Kunde inte läsa localStorage", e);
+                }
+                return {
+                    completedLevels: {}, // level: { stars, time }
+                    lastLevel: 1,
+                    soundEnabled: true
+                };
+            }
+
+            saveUserData() {
+                try {
+                    localStorage.setItem(STORAGE_KEY, JSON.stringify(this.userData));
+                } catch (e) {
+                    console.error("Kunde inte spara till localStorage", e);
+                }
+            }
+        }
+
+        const state = new GameState();
+
+        /* ==========================================================================
+           4. RENDERING OCH UI-HANTERING
+           ========================================================================== */
+        const boardEl = document.getElementById('skyscrapers-board');
+        const numpadEl = document.getElementById('numpad-container');
+        const timerDisplay = document.getElementById('timer-display');
+        const errorsCountEl = document.getElementById('errors-count');
+        const starsDisplay = document.getElementById('stars-display');
+        const levelBtnText = document.getElementById('level-indicator-btn');
+        const worldBadge = document.getElementById('world-badge');
+
+        function startTimer() {
+            clearInterval(state.timerInterval);
+            state.timerSeconds = 0;
+            updateTimerDisplay();
+            state.timerInterval = setInterval(() => {
+                state.timerSeconds++;
+                updateTimerDisplay();
+            }, 1000);
+        }
+
+        function stopTimer() {
+            clearInterval(state.timerInterval);
+        }
+
+        function formatTime(sec) {
+            const m = Math.floor(sec / 60).toString().padStart(2, '0');
+            const s = (sec % 60).toString().padStart(2, '0');
+            return `${m}:${s}`;
+        }
+
+        function updateTimerDisplay() {
+            timerDisplay.textContent = formatTime(state.timerSeconds);
+        }
+
+        function updateHeaderStats() {
+            levelBtnText.textContent = `Bana ${state.currentLevel} / 500`;
+            
+            // Beräkna totalt stjärnor
+            let totalStars = 0;
+            for (let l in state.userData.completedLevels) {
+                totalStars += (state.userData.completedLevels[l].stars || 0);
+            }
+            starsDisplay.textContent = `${totalStars} / 1500`;
+            errorsCountEl.textContent = state.errorsCount;
+
+            // Världstitel
+            if (state.currentLevel <= 150) {
+                worldBadge.textContent = 'Värld 1: 🏡 Pepparkaksbyn (4x4)';
+            } else if (state.currentLevel <= 350) {
+                worldBadge.textContent = 'Värld 2: 🎁 Tomteverkstan (5x5)';
+            } else {
+                worldBadge.textContent = 'Värld 3: ❄️ Nordpolen (6x6)';
+            }
+        }
+
+        function loadLevel(levelNum) {
+            state.currentLevel = Math.max(1, Math.min(500, levelNum));
+            state.userData.lastLevel = state.currentLevel;
+            state.saveUserData();
+
+            state.puzzle = generatePuzzleData(state.currentLevel);
+            const size = state.puzzle.size;
+
+            state.board = Array.from({ length: size }, () => Array(size).fill(0));
+            state.notes = Array.from({ length: size }, () => Array.from({ length: size }, () => new Set()));
+            state.givens = Array.from({ length: size }, () => Array(size).fill(false));
+            state.history = [];
+            state.hintsUsed = 0;
+            state.errorsCount = 0;
+            state.selectedCell = null;
+
+            // Initiera brädet med ev givens
+            for (let r = 0; r < size; r++) {
+                for (let c = 0; c < size; c++) {
+                    if (state.puzzle.initial[r][c] !== 0) {
+                        state.board[r][c] = state.puzzle.initial[r][c];
+                        state.givens[r][c] = true;
+                    }
+                }
+            }
+
+            renderNumpad();
+            renderBoard();
+            updateHeaderStats();
+            startTimer();
+        }
+
+        function renderNumpad() {
+            numpadEl.innerHTML = '';
+            const size = state.puzzle.size;
+
+            for (let i = 1; i <= size; i++) {
+                const btn = document.createElement('button');
+                btn.className = 'flex-1 py-3 sm:py-3.5 rounded-xl font-black text-lg sm:text-xl shadow-lg border border-amber-400/40 bg-gradient-to-t from-amber-700 to-amber-500 text-stone-900 active:scale-95 hover:brightness-110 transition flex items-center justify-center';
+                btn.textContent = i;
+                btn.dataset.num = i;
+                btn.addEventListener('click', () => handleNumberInput(i));
+                numpadEl.appendChild(btn);
+            }
+        }
+
+        function renderBoard() {
+            const size = state.puzzle.size;
+            boardEl.innerHTML = '';
+
+            // Total rutnätsstorlek = (size + 2) x (size + 2) med ledtrådar på kanterna
+            const totalDim = size + 2;
+            boardEl.style.gridTemplateColumns = `repeat(${totalDim}, minmax(0, 1fr))`;
+            boardEl.style.gridTemplateRows = `repeat(${totalDim}, minmax(0, 1fr))`;
+
+            for (let r = 0; r < totalDim; r++) {
+                for (let c = 0; c < totalDim; c++) {
+                    const isTopClue = (r === 0 && c > 0 && c <= size);
+                    const isBottomClue = (r === totalDim - 1 && c > 0 && c <= size);
+                    const isLeftClue = (c === 0 && r > 0 && r <= size);
+                    const isRightClue = (c === totalDim - 1 && r > 0 && r <= size);
+                    const isCorner = (r === 0 || r === totalDim - 1) && (c === 0 || c === totalDim - 1);
+
+                    if (isCorner) {
+                        const cornerDiv = document.createElement('div');
+                        cornerDiv.className = 'clue empty-corner';
+                        // Lägg till söt julikon i hörnen
+                        if (r === 0 && c === 0) cornerDiv.innerHTML = '<span class="text-xs sm:text-base opacity-40">🔔</span>';
+                        if (r === 0 && c === totalDim - 1) cornerDiv.innerHTML = '<span class="text-xs sm:text-base opacity-40">❄️</span>';
+                        if (r === totalDim - 1 && c === 0) cornerDiv.innerHTML = '<span class="text-xs sm:text-base opacity-40">🎄</span>';
+                        if (r === totalDim - 1 && c === totalDim - 1) cornerDiv.innerHTML = '<span class="text-xs sm:text-base opacity-40">⭐</span>';
+                        boardEl.appendChild(cornerDiv);
+                    } else if (isTopClue) {
+                        const colIdx = c - 1;
+                        const clueVal = state.puzzle.clues.top[colIdx];
+                        const div = createClueElement(clueVal, 'top', colIdx);
+                        boardEl.appendChild(div);
+                    } else if (isBottomClue) {
+                        const colIdx = c - 1;
+                        const clueVal = state.puzzle.clues.bottom[colIdx];
+                        const div = createClueElement(clueVal, 'bottom', colIdx);
+                        boardEl.appendChild(div);
+                    } else if (isLeftClue) {
+                        const rowIdx = r - 1;
+                        const clueVal = state.puzzle.clues.left[rowIdx];
+                        const div = createClueElement(clueVal, 'left', rowIdx);
+                        boardEl.appendChild(div);
+                    } else if (isRightClue) {
+                        const rowIdx = r - 1;
+                        const clueVal = state.puzzle.clues.right[rowIdx];
+                        const div = createClueElement(clueVal, 'right', rowIdx);
+                        boardEl.appendChild(div);
+                    } else {
+                        // Spelcell inuti brädet
+                        const cellRow = r - 1;
+                        const cellCol = c - 1;
+                        const cellEl = createCellElement(cellRow, cellCol);
+                        boardEl.appendChild(cellEl);
+                    }
+                }
+            }
+
+            updateClueSatisfactions();
+            highlightRelatedCells();
+        }
+
+        function createClueElement(value, type, index) {
+            const div = document.createElement('div');
+            div.className = 'clue';
+            div.dataset.clueType = type;
+            div.dataset.clueIndex = index;
+            div.textContent = value;
+            return div;
+        }
+
+        function createCellElement(r, c) {
+            const cell = document.createElement('div');
+            cell.className = 'cell';
+            cell.dataset.row = r;
+            cell.dataset.col = c;
+
+            const val = state.board[r][c];
+            const isGiven = state.givens[r][c];
+
+            if (isGiven) {
+                cell.classList.add('bg-amber-950/40', 'text-amber-300', 'font-black');
+            }
+
+            if (val > 0) {
+                cell.innerHTML = `
+                    <span class="text-2xl sm:text-3xl">${val}</span>
+                    <span class="tower-height-bar" style="width: ${(val / state.puzzle.size) * 80}%"></span>
+                `;
+            } else {
+                // Noter/Pencil markings
+                const cellNotes = state.notes[r][c];
+                if (cellNotes && cellNotes.size > 0) {
+                    const notesContainer = document.createElement('div');
+                    notesContainer.className = 'notes-grid';
+                    const maxNum = state.puzzle.size;
+                    for (let n = 1; n <= maxNum; n++) {
+                        const nSpan = document.createElement('span');
+                        nSpan.className = 'note-num';
+                        nSpan.textContent = cellNotes.has(n) ? n : '';
+                        notesContainer.appendChild(nSpan);
+                    }
+                    cell.appendChild(notesContainer);
+                }
+            }
+
+            // Klick/Val
+            cell.addEventListener('click', (e) => {
+                sound.init();
+                selectCell(r, c);
+            });
+
+            return cell;
+        }
+
+        function selectCell(r, c) {
+            state.selectedCell = { r, c };
+
+            // Uppdatera visuell markering
+            const allCells = boardEl.querySelectorAll('.cell');
+            allCells.forEach(el => {
+                const cr = parseInt(el.dataset.row);
+                const cc = parseInt(el.dataset.col);
+                if (cr === r && cc === c) {
+                    el.classList.add('selected');
+                } else {
+                    el.classList.remove('selected');
+                }
+            });
+
+            highlightRelatedCells();
+        }
+
+        function highlightRelatedCells() {
+            const allCells = boardEl.querySelectorAll('.cell');
+            const selectedVal = state.selectedCell ? state.board[state.selectedCell.r][state.selectedCell.c] : null;
+
+            allCells.forEach(el => {
+                const cr = parseInt(el.dataset.row);
+                const cc = parseInt(el.dataset.col);
+                el.classList.remove('highlight-same', 'error-conflict');
+
+                // Markera samma siffra på brädet för enklare översikt
+                if (selectedVal && selectedVal > 0 && state.board[cr][cc] === selectedVal) {
+                    el.classList.add('highlight-same');
+                }
+
+                // Kontrollera direkta dubblettkonflikter i rad/kolumn
+                if (hasRowColConflict(cr, cc)) {
+                    el.classList.add('error-conflict');
+                }
+            });
+        }
+
+        function hasRowColConflict(r, c) {
+            const val = state.board[r][c];
+            if (val === 0) return false;
+            const size = state.puzzle.size;
+
+            // Kolla rad
+            for (let i = 0; i < size; i++) {
+                if (i !== c && state.board[r][i] === val) return true;
+            }
+            // Kolla kolumn
+            for (let i = 0; i < size; i++) {
+                if (i !== r && state.board[i][c] === val) return true;
+            }
+            return false;
+        }
+
+        function updateClueSatisfactions() {
+            const size = state.puzzle.size;
+            const clueEls = boardEl.querySelectorAll('.clue[data-clue-type]');
+
+            clueEls.forEach(el => {
+                const type = el.dataset.clueType;
+                const idx = parseInt(el.dataset.clueIndex);
+                const expected = parseInt(el.textContent);
+
+                let line = [];
+                let isFull = true;
+
+                if (type === 'top') {
+                    for (let r = 0; r < size; r++) {
+                        const val = state.board[r][idx];
+                        line.push(val);
+                        if (val === 0) isFull = false;
+                    }
+                } else if (type === 'bottom') {
+                    for (let r = size - 1; r >= 0; r--) {
+                        const val = state.board[r][idx];
+                        line.push(val);
+                        if (val === 0) isFull = false;
+                    }
+                } else if (type === 'left') {
+                    for (let c = 0; c < size; c++) {
+                        const val = state.board[idx][c];
+                        line.push(val);
+                        if (val === 0) isFull = false;
+                    }
+                } else if (type === 'right') {
+                    for (let c = size - 1; c >= 0; c--) {
+                        const val = state.board[idx][c];
+                        line.push(val);
+                        if (val === 0) isFull = false;
+                    }
+                }
+
+                el.classList.remove('satisfied', 'unsatisfied-full');
+
+                if (isFull) {
+                    const actual = countVisibleTowers(line);
+                    if (actual === expected) {
+                        el.classList.add('satisfied');
+                    } else {
+                        el.classList.add('unsatisfied-full');
+                    }
+                }
+            });
+        }
+
+        /* ==========================================================================
+           5. INTERAKTION OCH DRAG-HANTERING
+           ========================================================================== */
+        function pushHistory() {
+            const snapshot = {
+                board: state.board.map(row => [...row]),
+                notes: state.notes.map(row => row.map(s => new Set(s)))
+            };
+            state.history.push(snapshot);
+            if (state.history.length > 50) state.history.shift();
+        }
+
+        function handleNumberInput(num) {
+            if (!state.selectedCell) return;
+            const { r, c } = state.selectedCell;
+
+            if (state.givens[r][c]) {
+                sound.playError();
+                return;
+            }
+
+            pushHistory();
+
+            if (state.isNoteMode) {
+                // Pennläge: Växla siffra i noteringar
+                if (state.notes[r][c].has(num)) {
+                    state.notes[r][c].delete(num);
+                } else {
+                    state.notes[r][c].add(num);
+                }
+                sound.playPop(num);
+            } else {
+                // Sätt siffra i cell
+                if (state.board[r][c] === num) {
+                    // Tryck på samma för att ta bort
+                    state.board[r][c] = 0;
+                    sound.playErase();
+                } else {
+                    state.board[r][c] = num;
+                    state.notes[r][c].clear(); // Töm noter när siffra sätts
+                    sound.playPop(num);
+
+                    // Automatisk konfliktkontroll
+                    if (hasRowColConflict(r, c)) {
+                        state.errorsCount++;
+                        errorsCountEl.textContent = state.errorsCount;
+                    }
+                }
+            }
+
+            renderBoard();
+            selectCell(r, c);
+            checkVictory();
+        }
+
+        function clearSelectedCell() {
+            if (!state.selectedCell) return;
+            const { r, c } = state.selectedCell;
+            if (state.givens[r][c]) return;
+
+            if (state.board[r][c] !== 0 || state.notes[r][c].size > 0) {
+                pushHistory();
+                state.board[r][c] = 0;
+                state.notes[r][c].clear();
+                sound.playErase();
+                renderBoard();
+                selectCell(r, c);
+            }
+        }
+
+        function undoLastMove() {
+            if (state.history.length === 0) return;
+            const prev = state.history.pop();
+            state.board = prev.board;
+            state.notes = prev.notes;
+            sound.playErase();
+            renderBoard();
+            if (state.selectedCell) selectCell(state.selectedCell.r, state.selectedCell.c);
+        }
+
+        function giveHint() {
+            // Hitta en tom eller felaktig ruta
+            const size = state.puzzle.size;
+            let candidates = [];
+
+            for (let r = 0; r < size; r++) {
+                for (let c = 0; c < size; c++) {
+                    if (!state.givens[r][c]) {
+                        if (state.board[r][c] !== state.puzzle.solution[r][c]) {
+                            candidates.push({ r, c });
+                        }
+                    }
+                }
+            }
+
+            if (candidates.length === 0) {
+                return; // Redan löst eller fullt
+            }
+
+            pushHistory();
+            state.hintsUsed++;
+            sound.playJingleBell();
+
+            // Välj en slumpmässig kandidat
+            const pick = candidates[Math.floor(Math.random() * candidates.length)];
+            state.board[pick.r][pick.c] = state.puzzle.solution[pick.r][pick.c];
+            state.notes[pick.r][pick.c].clear();
+
+            renderBoard();
+            selectCell(pick.r, pick.c);
+            checkVictory();
+        }
+
+        /* Tangentbordsstöd (1..6, Backspace, Delete, Piltangenter, N) */
+        window.addEventListener('keydown', (e) => {
+            sound.init();
+            const key = e.key;
+
+            if (key >= '1' && key <= '6') {
+                const num = parseInt(key);
+                if (num <= state.puzzle.size) {
+                    handleNumberInput(num);
+                }
+            } else if (key === 'Backspace' || key === 'Delete' || key === '0') {
+                clearSelectedCell();
+            } else if (key.toLowerCase() === 'n') {
+                toggleNoteMode();
+            } else if (key.toLowerCase() === 'z' && (e.ctrlKey || e.metaKey)) {
+                undoLastMove();
+            } else if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(key)) {
+                e.preventDefault();
+                moveSelection(key);
+            }
+        });
+
+        function moveSelection(direction) {
+            const size = state.puzzle.size;
+            let r = state.selectedCell ? state.selectedCell.r : 0;
+            let c = state.selectedCell ? state.selectedCell.c : 0;
+
+            if (direction === 'ArrowUp') r = (r - 1 + size) % size;
+            if (direction === 'ArrowDown') r = (r + 1) % size;
+            if (direction === 'ArrowLeft') c = (c - 1 + size) % size;
+            if (direction === 'ArrowRight') c = (c + 1) % size;
+
+            selectCell(r, c);
+        }
+
+        function toggleNoteMode() {
+            state.isNoteMode = !state.isNoteMode;
+            const noteIcon = document.getElementById('note-icon');
+            const noteText = document.getElementById('note-text');
+            const btn = document.getElementById('btn-notes');
+
+            if (state.isNoteMode) {
+                noteIcon.classList.remove('opacity-60');
+                noteIcon.classList.add('opacity-100');
+                noteText.textContent = 'Penna: På';
+                btn.classList.add('border-amber-400', 'bg-amber-950/80');
+            } else {
+                noteIcon.classList.add('opacity-60');
+                noteIcon.classList.remove('opacity-100');
+                noteText.textContent = 'Penna: Av';
+                btn.classList.remove('border-amber-400', 'bg-amber-950/80');
+            }
+            sound.playPop(3);
+        }
+
+        /* ==========================================================================
+           6. VINSTKONTROLL & RESULTAT
+           ========================================================================== */
+        function checkVictory() {
+            const size = state.puzzle.size;
+
+            // Kontrollera att alla celler är ifyllda
+            for (let r = 0; r < size; r++) {
+                for (let c = 0; c < size; c++) {
+                    if (state.board[r][c] === 0) return false;
+                }
+            }
+
+            // Kontrollera att varje rad och kolumn har alla 1..size utan dubbletter
+            for (let i = 0; i < size; i++) {
+                const rowSet = new Set(state.board[i]);
+                if (rowSet.size !== size) return false;
+
+                const colSet = new Set();
+                for (let r = 0; r < size; r++) colSet.add(state.board[r][i]);
+                if (colSet.size !== size) return false;
+            }
+
+            // Kontrollera samtliga sikt-ledtrådar runt brädet
+            for (let c = 0; c < size; c++) {
+                const colVals = [];
+                for (let r = 0; r < size; r++) colVals.push(state.board[r][c]);
+                if (countVisibleTowers(colVals) !== state.puzzle.clues.top[c]) return false;
+                if (countVisibleTowers([...colVals].reverse()) !== state.puzzle.clues.bottom[c]) return false;
+            }
+
+            for (let r = 0; r < size; r++) {
+                const rowVals = [...state.board[r]];
+                if (countVisibleTowers(rowVals) !== state.puzzle.clues.left[r]) return false;
+                if (countVisibleTowers([...rowVals].reverse()) !== state.puzzle.clues.right[r]) return false;
+            }
+
+            // Alla regler uppfyllda! Seger!
+            handleLevelCompleted();
+            return true;
+        }
+
+        function handleLevelCompleted() {
+            stopTimer();
+            sound.playVictoryFanfare();
+
+            // Beräkna stjärnor (1 - 3 stjärnor)
+            let stars = 3;
+            if (state.errorsCount > 2 || state.hintsUsed > 0) stars = 2;
+            if (state.errorsCount > 5 || state.hintsUsed > 2) stars = 1;
+
+            // Spara data
+            const prevRecord = state.userData.completedLevels[state.currentLevel];
+            const bestStars = prevRecord ? Math.max(prevRecord.stars, stars) : stars;
+            const bestTime = prevRecord ? Math.min(prevRecord.time, state.timerSeconds) : state.timerSeconds;
+
+            state.userData.completedLevels[state.currentLevel] = {
+                stars: bestStars,
+                time: bestTime
+            };
+            state.saveUserData();
+            updateHeaderStats();
+
+            // Visa Victory Modal
+            document.getElementById('victory-time').textContent = formatTime(state.timerSeconds);
+            document.getElementById('victory-errors').textContent = state.errorsCount;
+            document.getElementById('victory-hints').textContent = state.hintsUsed;
+            
+            const starStr = '⭐'.repeat(stars) + '☆'.repeat(3 - stars);
+            document.getElementById('victory-stars').textContent = starStr;
+
+            showModal('modal-victory');
+        }
+
+        /* ==========================================================================
+           7. BANVÄLJARE MED 500 BANOR I 3 VÄRLDAR
+           ========================================================================== */
+        let activeWorld = 1;
+
+        function openLevelsModal() {
+            // Välj lämplig världsflik för aktuell nivå
+            if (state.currentLevel <= 150) activeWorld = 1;
+            else if (state.currentLevel <= 350) activeWorld = 2;
+            else activeWorld = 3;
+
+            renderWorldTabs();
+            renderLevelGrid();
+            showModal('modal-levels');
+        }
+
+        function renderWorldTabs() {
+            const tabs = document.querySelectorAll('.world-tab');
+            tabs.forEach(tab => {
+                const w = parseInt(tab.dataset.world);
+                if (w === activeWorld) {
+                    tab.className = 'world-tab min-h-[52px] py-1.5 px-1 rounded-xl text-center transition flex flex-col items-center justify-center border border-amber-400 bg-gradient-to-b from-amber-500 to-amber-600 text-stone-950 font-extrabold shadow-md leading-tight';
+                } else {
+                    tab.className = 'world-tab min-h-[52px] py-1.5 px-1 rounded-xl text-center transition flex flex-col items-center justify-center border border-slate-700/80 bg-slate-800/80 text-slate-300 font-bold hover:bg-slate-700 leading-tight';
+                }
+            });
+        }
+
+        function renderLevelGrid() {
+            const container = document.getElementById('levels-grid-container');
+            container.innerHTML = '';
+
+            let startLevel = 1;
+            let endLevel = 150;
+            if (activeWorld === 2) { startLevel = 151; endLevel = 350; }
+            if (activeWorld === 3) { startLevel = 351; endLevel = 500; }
+
+            let completedCount = 0;
+            const totalInWorld = endLevel - startLevel + 1;
+
+            const fragment = document.createDocumentFragment();
+
+            for (let i = startLevel; i <= endLevel; i++) {
+                const levelData = state.userData.completedLevels[i];
+                const isCompleted = !!levelData;
+                const isCurrent = (i === state.currentLevel);
+                if (isCompleted) completedCount++;
+
+                const btn = document.createElement('button');
+                
+                let btnClass = 'relative p-2 rounded-xl flex flex-col items-center justify-center transition active:scale-95 border min-h-[58px] ';
+                if (isCurrent) {
+                    btnClass += 'border-amber-400 bg-amber-500/30 text-amber-200 font-black shadow-[0_0_12px_rgba(251,191,36,0.5)] ring-2 ring-amber-400/40';
+                } else if (isCompleted) {
+                    btnClass += 'border-emerald-500/80 bg-gradient-to-b from-emerald-950/80 to-emerald-900/60 text-emerald-200 font-extrabold shadow-[inset_0_1px_1px_rgba(255,255,255,0.15)]';
+                } else {
+                    btnClass += 'border-slate-700/70 bg-slate-800/40 text-slate-300 hover:border-amber-600/50 hover:bg-slate-800/70';
+                }
+                btn.className = btnClass;
+
+                // Stjärnor & klarat-märke
+                let badgeHtml = '';
+                let starHtml = '<span class="text-[10px] text-slate-600">•</span>';
+
+                if (isCompleted) {
+                    badgeHtml = '<span class="absolute top-1 right-1 text-[9px] bg-emerald-500 text-stone-950 rounded-full w-3.5 h-3.5 flex items-center justify-center font-black">✓</span>';
+                    const starCount = levelData.stars || 1;
+                    starHtml = `<span class="text-[10px] text-amber-300 tracking-tighter">${'⭐'.repeat(starCount)}</span>`;
+                }
+
+                btn.innerHTML = `
+                    ${badgeHtml}
+                    <span class="text-sm sm:text-base font-extrabold">${i}</span>
+                    <div class="h-3 flex items-center justify-center mt-0.5">${starHtml}</div>
+                `;
+
+                btn.addEventListener('click', () => {
+                    hideModal('modal-levels');
+                    loadLevel(i);
+                });
+
+                fragment.appendChild(btn);
+            }
+
+            container.appendChild(fragment);
+            document.getElementById('world-progress-text').textContent = `Klara: ${completedCount} / ${totalInWorld}`;
+        }
+
+        /* ==========================================================================
+           8. MODALER OCH HJÄLPFUNKTIONER
+           ========================================================================== */
+        function showModal(id) {
+            const el = document.getElementById(id);
+            el.classList.remove('hidden');
+            setTimeout(() => {
+                el.classList.remove('opacity-0');
+            }, 10);
+        }
+
+        function hideModal(id) {
+            const el = document.getElementById(id);
+            el.classList.add('opacity-0');
+            setTimeout(() => {
+                el.classList.add('hidden');
+            }, 200);
+        }
+
+        /* Lyssna på knappar */
+        document.getElementById('btn-undo').addEventListener('click', () => {
+            sound.init();
+            undoLastMove();
+        });
+
+        document.getElementById('btn-notes').addEventListener('click', () => {
+            sound.init();
+            toggleNoteMode();
+        });
+
+        document.getElementById('btn-hint').addEventListener('click', () => {
+            sound.init();
+            giveHint();
+        });
+
+        document.getElementById('btn-clear').addEventListener('click', () => {
+            sound.init();
+            clearSelectedCell();
+        });
+
+        document.getElementById('btn-open-levels').addEventListener('click', () => {
+            sound.init();
+            openLevelsModal();
+        });
+
+        document.getElementById('btn-close-levels').addEventListener('click', () => hideModal('modal-levels'));
+
+        document.getElementById('btn-prev-level').addEventListener('click', () => {
+            if (state.currentLevel > 1) {
+                sound.playPop(1);
+                loadLevel(state.currentLevel - 1);
+            }
+        });
+
+        document.getElementById('btn-next-level').addEventListener('click', () => {
+            if (state.currentLevel < 500) {
+                sound.playPop(2);
+                loadLevel(state.currentLevel + 1);
+            }
+        });
+
+        document.getElementById('btn-rules').addEventListener('click', () => {
+            sound.init();
+            showModal('modal-rules');
+        });
+
+        document.getElementById('btn-close-rules').addEventListener('click', () => hideModal('modal-rules'));
+        document.getElementById('btn-close-rules-confirm').addEventListener('click', () => hideModal('modal-rules'));
+
+        document.getElementById('btn-replay-level').addEventListener('click', () => {
+            hideModal('modal-victory');
+            loadLevel(state.currentLevel);
+        });
+
+        document.getElementById('btn-next-victory').addEventListener('click', () => {
+            hideModal('modal-victory');
+            if (state.currentLevel < 500) {
+                loadLevel(state.currentLevel + 1);
+            }
+        });
+
+        document.getElementById('btn-sound-toggle').addEventListener('click', (e) => {
+            sound.enabled = !sound.enabled;
+            e.currentTarget.textContent = sound.enabled ? '🔔' : '🔕';
+            if (sound.enabled) sound.playJingleBell();
+        });
+
+        // Världsflikar
+        document.querySelectorAll('.world-tab').forEach(tab => {
+            tab.addEventListener('click', (e) => {
+                activeWorld = parseInt(tab.dataset.world);
+                renderWorldTabs();
+                renderLevelGrid();
+            });
+        });
+
+        // Hoppa till specifik bana
+        document.getElementById('btn-jump-level').addEventListener('click', () => {
+            const val = parseInt(document.getElementById('jump-level-input').value);
+            if (!isNaN(val) && val >= 1 && val <= 500) {
+                hideModal('modal-levels');
+                loadLevel(val);
+            }
+        });
+
+        /* ==========================================================================
+           9. REALISTISKT SNÖFALL I BAKGRUNDEN (CANVAS)
+           ========================================================================== */
+        const canvas = document.getElementById('snow-canvas');
+        const ctx = canvas.getContext('2d');
+        let width = canvas.width = window.innerWidth;
+        let height = canvas.height = window.innerHeight;
+
+        const flakes = [];
+        const flakeCount = 65;
+
+        for (let i = 0; i < flakeCount; i++) {
+            flakes.push({
+                x: Math.random() * width,
+                y: Math.random() * height,
+                radius: Math.random() * 2.5 + 1,
+                speedY: Math.random() * 0.8 + 0.4,
+                speedX: Math.random() * 0.6 - 0.3,
+                opacity: Math.random() * 0.6 + 0.3
+            });
+        }
+
+        window.addEventListener('resize', () => {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+        });
+
+        function renderSnow() {
+            ctx.clearRect(0, 0, width, height);
+            ctx.fillStyle = '#ffffff';
+
+            for (let i = 0; i < flakes.length; i++) {
+                const f = flakes[i];
+                ctx.beginPath();
+                ctx.arc(f.x, f.y, f.radius, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(255, 255, 255, ${f.opacity})`;
+                ctx.fill();
+
+                f.y += f.speedY;
+                f.x += f.speedX;
+
+                if (f.y > height) {
+                    f.y = -5;
+                    f.x = Math.random() * width;
+                }
+                if (f.x > width) f.x = 0;
+                if (f.x < 0) f.x = width;
+            }
+
+            requestAnimationFrame(renderSnow);
+        }
+
+        /* ==========================================================================
+           10. STARTA APPEN
+           ========================================================================== */
+        window.onload = function () {
+            // Starta snöfall
+            renderSnow();
+
+            // Ladda senaste eller bana 1
+            const startLvl = state.userData.lastLevel || 1;
+            loadLevel(startLvl);
+
+            // Visa regelmodal vid första besöket
+            if (Object.keys(state.userData.completedLevels).length === 0 && startLvl === 1) {
+                setTimeout(() => {
+                    showModal('modal-rules');
+                }, 400);
+            }
+        };
+    </script>
+</body>
+</html>

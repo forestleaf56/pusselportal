@@ -1,0 +1,1076 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Flora - Väck Skogen till Liv</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Quicksand:wght@500;600;700&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        forest: {
+                            950: '#071711',
+                            900: '#0c221a',
+                            800: '#14382c',
+                            700: '#1c4d3d',
+                            600: '#276752',
+                        },
+                        flora: {
+                            seed: '#2b2923',
+                            leaf: '#3da769',
+                            bloom: '#10b981',
+                            glow: '#34d399',
+                            gold: '#fbbf24',
+                            amber: '#f59e0b',
+                            petal: '#ec4899',
+                            dew: '#a7f3d0'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+                        display: ['Quicksand', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* Mobile touch and view fixes */
+        html, body {
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        /* Ambient animated forest background */
+        .forest-bg {
+            background: radial-gradient(circle at 50% 20%, #164032 0%, #0c231b 50%, #06130e 100%);
+        }
+
+        /* Ambient floating fireflies / pollen */
+        .ambient-firefly {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: #a7f3d0;
+            border-radius: 50%;
+            filter: blur(1px);
+            box-shadow: 0 0 8px #34d399;
+            pointer-events: none;
+            animation: drift 14s infinite linear;
+            opacity: 0.6;
+        }
+
+        @keyframes drift {
+            0% { transform: translateY(100vh) translateX(0) scale(0.6); opacity: 0; }
+            20% { opacity: 0.8; }
+            80% { opacity: 0.8; }
+            100% { transform: translateY(-20px) translateX(60px) scale(1.2); opacity: 0; }
+        }
+
+        /* Puzzle Tile Styling & Ripple Animations */
+        .tile {
+            transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1), background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .tile:active {
+            transform: scale(0.92);
+        }
+
+        /* Bloom State Glow */
+        .tile-bloomed {
+            background: radial-gradient(circle at 35% 35%, #10b981 0%, #047857 70%, #064e3b 100%);
+            box-shadow: 0 0 16px rgba(52, 211, 153, 0.45), inset 0 2px 4px rgba(255, 255, 255, 0.3);
+            border: 2px solid #6ee7b7;
+        }
+
+        /* Dormant Seed State */
+        .tile-dormant {
+            background: radial-gradient(circle at 30% 30%, #202b25 0%, #131c17 75%, #0d1410 100%);
+            box-shadow: inset 0 3px 6px rgba(0, 0, 0, 0.6);
+            border: 2px solid #20352a;
+        }
+
+        /* Pulse wave when flipping */
+        .wave-pulse {
+            animation: sproutPulse 0.4s ease-out;
+        }
+
+        @keyframes sproutPulse {
+            0% { transform: scale(0.85); filter: brightness(1.6); }
+            50% { transform: scale(1.08); }
+            100% { transform: scale(1); filter: brightness(1); }
+        }
+
+        /* Particle Canvas overlay */
+        #confettiCanvas {
+            pointer-events: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 60;
+        }
+
+        /* Scrollbar custom for level selector */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0c221a;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #1c4d3d;
+            border-radius: 9999px;
+        }
+    </style>
+</head>
+<body class="forest-bg text-emerald-50 min-h-screen flex flex-col justify-between font-sans overflow-x-hidden relative selection:bg-emerald-500 selection:text-white">
+
+    <!-- Confetti & Win Particles -->
+    <canvas id="confettiCanvas"></canvas>
+
+    <!-- Background Ambient Fireflies -->
+    <div id="ambientContainer" class="fixed inset-0 pointer-events-none z-0 overflow-hidden"></div>
+
+    <!-- Header Section -->
+    <header class="relative z-10 w-full max-w-lg mx-auto px-4 pt-4 pb-2 flex items-center justify-between">
+        <div class="flex items-center space-x-2.5">
+            <div class="w-10 h-10 rounded-2xl bg-emerald-500/20 border border-emerald-400/30 flex items-center justify-center text-emerald-300 shadow-lg shadow-emerald-950/50">
+                <i class="fa-solid fa-seedling text-lg"></i>
+            </div>
+            <div>
+                <h1 class="text-xl font-bold font-display tracking-tight text-white flex items-center gap-1.5">
+                    Flora <span class="text-xs px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-medium">Eco</span>
+                </h1>
+                <p class="text-[11px] text-emerald-300/70 font-medium">Väck Skogen till Liv</p>
+            </div>
+        </div>
+
+        <div class="flex items-center space-x-2">
+            <!-- Audio Toggle -->
+            <button id="soundBtn" class="w-9 h-9 rounded-xl bg-forest-800/80 border border-forest-600/50 flex items-center justify-center text-emerald-300 hover:text-white active:scale-95 transition-all" title="Ljud av/på">
+                <i id="soundIcon" class="fa-solid fa-volume-high text-sm"></i>
+            </button>
+            <!-- Level Select Modal Trigger -->
+            <button id="openLevelsBtn" class="flex items-center space-x-1.5 px-3 h-9 rounded-xl bg-forest-800/80 border border-forest-600/50 text-xs font-semibold text-emerald-200 hover:border-emerald-400/50 active:scale-95 transition-all">
+                <i class="fa-solid fa-map"></i>
+                <span id="levelHeaderTag">Bana 1</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Game Board Area -->
+    <main class="relative z-10 flex-1 flex flex-col items-center justify-center px-4 py-2 w-full max-w-md mx-auto">
+        
+        <!-- Status Bar & Stars -->
+        <div class="w-full bg-forest-900/60 backdrop-blur-md border border-forest-700/40 rounded-2xl p-3 mb-3 shadow-xl flex items-center justify-between">
+            <div class="flex flex-col">
+                <span class="text-[11px] uppercase tracking-wider text-emerald-400/70 font-bold">Nivå & Storlek</span>
+                <div class="flex items-center gap-1.5">
+                    <span id="levelLabel" class="text-base font-bold text-white font-display">Bana 1</span>
+                    <span id="gridSizeLabel" class="text-xs px-2 py-0.5 rounded bg-forest-800 text-emerald-300 font-medium border border-forest-600/40">3x3</span>
+                </div>
+            </div>
+
+            <!-- Target / Move Counter -->
+            <div class="flex flex-col items-center">
+                <span class="text-[11px] uppercase tracking-wider text-emerald-400/70 font-bold">Drag Gjorda</span>
+                <div class="flex items-baseline space-x-1">
+                    <span id="movesCount" class="text-lg font-black text-emerald-300 font-display">0</span>
+                    <span class="text-xs text-emerald-500 font-medium">/ <span id="parMoves">2</span></span>
+                </div>
+            </div>
+
+            <!-- Progress / Score -->
+            <div class="flex flex-col items-end">
+                <span class="text-[11px] uppercase tracking-wider text-emerald-400/70 font-bold">Blommande</span>
+                <div class="flex items-center space-x-1">
+                    <span id="bloomedStat" class="text-base font-bold text-emerald-200 font-display">0%</span>
+                    <i class="fa-solid fa-leaf text-xs text-emerald-400"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- The Interactive Grid Wrapper -->
+        <div class="w-full aspect-square max-w-[360px] p-3 rounded-3xl bg-forest-900/80 backdrop-blur-lg border border-forest-700/60 shadow-2xl relative flex items-center justify-center">
+            <div id="gridContainer" class="w-full h-full grid gap-2.5 transition-all duration-300">
+                <!-- Dynamically populated tiles -->
+            </div>
+
+            <!-- Hint indicator overlay message if active -->
+            <div id="hintToast" class="hidden absolute top-4 left-1/2 -translate-x-1/2 bg-amber-500/90 text-amber-950 font-bold px-3 py-1 text-xs rounded-full shadow-lg border border-amber-300/80 flex items-center gap-1.5 animate-bounce">
+                <i class="fa-regular fa-lightbulb"></i>
+                <span>Gyllene sken markerar ett bra drag!</span>
+            </div>
+        </div>
+
+        <!-- Action Controls -->
+        <div class="w-full max-w-[360px] mt-4 grid grid-cols-4 gap-2">
+            <!-- Undo Button -->
+            <button id="undoBtn" class="flex flex-col items-center justify-center p-2.5 rounded-2xl bg-forest-900/70 border border-forest-700/50 hover:bg-forest-800 text-emerald-300 active:scale-95 transition-all disabled:opacity-30 disabled:pointer-events-none">
+                <i class="fa-solid fa-rotate-left text-base mb-1"></i>
+                <span class="text-[11px] font-semibold">Ångra</span>
+            </button>
+
+            <!-- Reset Button -->
+            <button id="resetBtn" class="flex flex-col items-center justify-center p-2.5 rounded-2xl bg-forest-900/70 border border-forest-700/50 hover:bg-forest-800 text-emerald-300 active:scale-95 transition-all">
+                <i class="fa-solid fa-arrow-rotate-right text-base mb-1"></i>
+                <span class="text-[11px] font-semibold">Starta om</span>
+            </button>
+
+            <!-- Hint Button -->
+            <button id="hintBtn" class="flex flex-col items-center justify-center p-2.5 rounded-2xl bg-forest-900/70 border border-forest-700/50 hover:bg-forest-800 text-amber-300 active:scale-95 transition-all">
+                <i class="fa-solid fa-lightbulb text-base mb-1"></i>
+                <span class="text-[11px] font-semibold">Tips</span>
+            </button>
+
+            <!-- Quick Prev/Next level dropdown-style toggle -->
+            <button id="navBtn" class="flex flex-col items-center justify-center p-2.5 rounded-2xl bg-forest-900/70 border border-forest-700/50 hover:bg-forest-800 text-emerald-300 active:scale-95 transition-all">
+                <i class="fa-solid fa-compass text-base mb-1"></i>
+                <span class="text-[11px] font-semibold">Kartbok</span>
+            </button>
+        </div>
+
+    </main>
+
+    <!-- Footer info -->
+    <footer class="relative z-10 w-full max-w-lg mx-auto px-4 py-2.5 text-center text-xs text-emerald-400/60 font-medium">
+        Klicka på en ruta för att väcka eller vila naturen och dess grannar. Väck hela skogen!
+    </footer>
+
+    <!-- LEVEL SELECTION MODAL -->
+    <div id="levelModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-md hidden flex items-center justify-center p-4">
+        <div class="bg-forest-900 border border-forest-700/80 rounded-3xl w-full max-w-md max-h-[85vh] flex flex-col shadow-2xl overflow-hidden animate-fade-in">
+            <!-- Modal Header -->
+            <div class="p-4 border-b border-forest-800/80 flex items-center justify-between bg-forest-950/40">
+                <div>
+                    <h2 class="text-lg font-bold font-display text-white flex items-center gap-2">
+                        <i class="fa-solid fa-tree text-emerald-400"></i>
+                        Välj Skogsväg
+                    </h2>
+                    <p class="text-xs text-emerald-400/70">500 banor att återplantera</p>
+                </div>
+                <button id="closeLevelModalBtn" class="w-8 h-8 rounded-full bg-forest-800 border border-forest-700 flex items-center justify-center text-emerald-300 hover:text-white">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <!-- Search and Filter Bar -->
+            <div class="px-4 py-3 bg-forest-950/30 flex items-center gap-2 border-b border-forest-800/60">
+                <div class="relative flex-1">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-xs text-emerald-400/60"></i>
+                    <input type="number" id="levelSearchInput" placeholder="Gå till bana (1-500)..." min="1" max="500" class="w-full bg-forest-950/80 border border-forest-700/60 rounded-xl pl-8 pr-3 py-1.5 text-xs text-emerald-100 placeholder-emerald-600 focus:outline-none focus:border-emerald-500">
+                </div>
+                <button id="jumpLevelBtn" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition-all">
+                    Gå
+                </button>
+            </div>
+
+            <!-- Pagination Bar (Tabs of 50) -->
+            <div class="px-4 py-2 border-b border-forest-800/60 flex items-center justify-between text-xs font-medium text-emerald-300">
+                <button id="prevPageBtn" class="px-2 py-1 rounded bg-forest-800 hover:bg-forest-700 disabled:opacity-30">
+                    <i class="fa-solid fa-chevron-left mr-1"></i> Föregående
+                </button>
+                <span id="pageRangeLabel" class="text-xs font-bold text-white">Bana 1 - 50</span>
+                <button id="nextPageBtn" class="px-2 py-1 rounded bg-forest-800 hover:bg-forest-700 disabled:opacity-30">
+                    Nästa <i class="fa-solid fa-chevron-right ml-1"></i>
+                </button>
+            </div>
+
+            <!-- Level Grid Scrollable -->
+            <div id="levelGridList" class="p-4 grid grid-cols-5 gap-2.5 overflow-y-auto max-h-[50vh]">
+                <!-- Populated via script -->
+            </div>
+
+            <!-- Footer Stats in Modal -->
+            <div class="p-3 bg-forest-950/50 border-t border-forest-800/80 flex items-center justify-between text-xs text-emerald-300/80">
+                <span>Klarade banor: <strong id="completedCount" class="text-emerald-300">0</strong> / 500</span>
+                <span>Totalt stjärnor: <strong id="totalStarsCount" class="text-amber-400">0</strong> <i class="fa-solid fa-star text-[10px] text-amber-400"></i></span>
+            </div>
+        </div>
+    </div>
+
+    <!-- VICTORY / LEVEL COMPLETE MODAL -->
+    <div id="winModal" class="fixed inset-0 z-50 bg-black/75 backdrop-blur-md hidden flex items-center justify-center p-4">
+        <div class="bg-forest-900 border-2 border-emerald-500/60 rounded-3xl w-full max-w-sm p-6 flex flex-col items-center text-center shadow-2xl relative overflow-hidden animate-bounce-subtle">
+            <!-- Glow background blob -->
+            <div class="absolute -top-16 -left-16 w-36 h-36 bg-emerald-500/20 rounded-full blur-2xl pointer-events-none"></div>
+            <div class="absolute -bottom-16 -right-16 w-36 h-36 bg-amber-500/20 rounded-full blur-2xl pointer-events-none"></div>
+
+            <div class="w-16 h-16 rounded-3xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center text-white text-3xl shadow-lg shadow-emerald-500/30 mb-3 animate-pulse">
+                <i class="fa-solid fa-spa"></i>
+            </div>
+
+            <h3 class="text-2xl font-black font-display text-white mb-1">Naturen Blomstrar!</h3>
+            <p id="winSubtext" class="text-xs text-emerald-300/80 mb-4">Du har återupplivat hela skogsgläntan.</p>
+
+            <!-- Star Rating Display -->
+            <div id="winStars" class="flex items-center space-x-2 text-2xl mb-4">
+                <i class="fa-solid fa-star text-amber-400"></i>
+                <i class="fa-solid fa-star text-amber-400"></i>
+                <i class="fa-solid fa-star text-amber-400"></i>
+            </div>
+
+            <!-- Stats Box -->
+            <div class="w-full bg-forest-950/60 rounded-2xl p-3 border border-forest-800/80 grid grid-cols-2 gap-2 text-left mb-5">
+                <div>
+                    <span class="text-[10px] uppercase font-bold text-emerald-400/60">Dina drag</span>
+                    <p id="winMoves" class="text-base font-bold text-white font-display">0</p>
+                </div>
+                <div>
+                    <span class="text-[10px] uppercase font-bold text-emerald-400/60">Par (optimalt)</span>
+                    <p id="winPar" class="text-base font-bold text-emerald-300 font-display">0</p>
+                </div>
+            </div>
+
+            <!-- Action buttons -->
+            <div class="flex items-center gap-3 w-full">
+                <button id="winReplayBtn" class="flex-1 py-3 rounded-2xl bg-forest-800 hover:bg-forest-700 border border-forest-600/50 text-emerald-200 font-bold text-sm transition-all active:scale-95 flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-arrow-rotate-right"></i>
+                    Igen
+                </button>
+                <button id="winNextBtn" class="flex-1 py-3 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-forest-950 font-black text-sm shadow-lg shadow-emerald-500/30 transition-all active:scale-95 flex items-center justify-center gap-2">
+                    Nästa bana
+                    <i class="fa-solid fa-arrow-right"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- AUDIO & LOGIC SCRIPT -->
+    <script>
+        /**
+         * Web Audio Synthesizer for Natural Sounds
+         * Generates organic wooden clicks, water drops, and soft pentatonic harp tones.
+         */
+        class SoundEngine {
+            constructor() {
+                this.ctx = null;
+                this.isMuted = localStorage.getItem('flora_muted') === 'true';
+            }
+
+            init() {
+                if (!this.ctx) {
+                    const AudioContext = window.AudioContext || window.webkitAudioContext;
+                    if (AudioContext) {
+                        this.ctx = new AudioContext();
+                    }
+                }
+                if (this.ctx && this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+            }
+
+            toggleMute() {
+                this.isMuted = !this.isMuted;
+                localStorage.setItem('flora_muted', this.isMuted);
+                return this.isMuted;
+            }
+
+            playLeafClick(pitchMod = 1) {
+                if (this.isMuted) return;
+                this.init();
+                if (!this.ctx) return;
+
+                const t = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+
+                // Gentle marimba / woodblock like harmonic tone
+                osc.type = 'triangle';
+                const baseFreq = 320 * pitchMod;
+                osc.frequency.setValueAtTime(baseFreq, t);
+                osc.frequency.exponentialRampToValueAtTime(baseFreq * 0.4, t + 0.12);
+
+                gain.gain.setValueAtTime(0.2, t);
+                gain.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+
+                osc.start(t);
+                osc.stop(t + 0.13);
+            }
+
+            playBloomHarp() {
+                if (this.isMuted) return;
+                this.init();
+                if (!this.ctx) return;
+
+                // Pentatonic chord progression arpeggio
+                const notes = [523.25, 659.25, 783.99, 1046.50, 1318.51]; // C5, E5, G5, C6, E6
+                notes.forEach((freq, idx) => {
+                    const t = this.ctx.currentTime + (idx * 0.08);
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(freq, t);
+
+                    gain.gain.setValueAtTime(0.18, t);
+                    gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.8);
+
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+
+                    osc.start(t);
+                    osc.stop(t + 0.85);
+                });
+            }
+        }
+
+        /**
+         * Pseudo-Random Number Generator (PRNG - Mulberry32)
+         * Ensures determinism: Level N is guaranteed identical and fully solvable on all devices.
+         */
+        function mulberry32(seed) {
+            return function() {
+                var t = seed += 0x6D2B79F5;
+                t = Math.imul(t ^ t >>> 15, t | 1);
+                t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+                return ((t ^ t >>> 14) >>> 0) / 4294967296;
+            }
+        }
+
+        /**
+         * Game State & Config
+         */
+        const TOTAL_LEVELS = 500;
+        const sound = new SoundEngine();
+
+        let currentLevel = parseInt(localStorage.getItem('flora_current_level') || '1');
+        let levelData = JSON.parse(localStorage.getItem('flora_levels_record') || '{}'); 
+        // Record structure: { [level]: { completed: boolean, stars: number, bestMoves: number } }
+
+        let gridDimension = 3;
+        let board = []; // 2D array: true = bloomed (lit), false = dormant (dark)
+        let moveHistory = [];
+        let movesMade = 0;
+        let parMoves = 2;
+        let hintTile = null;
+        let solutionClicks = []; // Used to calculate hint and par moves
+
+        // Modal Pagination
+        let modalPage = 0; // Page size = 50 levels per page (0 to 9)
+
+        /**
+         * Level Difficulty & Size Scaling Function
+         * - Levels 1 - 25: 3x3 (Beginner glade)
+         * - Levels 26 - 150: 4x4 (Growing woodland)
+         * - Levels 151 - 400: 5x5 (Deep enchanted forest)
+         * - Levels 401 - 500: 6x6 (Master canopy)
+         */
+        function getLevelConfig(lvl) {
+            let dim = 3;
+            if (lvl > 400) dim = 6;
+            else if (lvl > 150) dim = 5;
+            else if (lvl > 25) dim = 4;
+
+            // Complexity: number of simulated toggle steps from a solved all-bloomed state
+            // Ensures 100% solvability because toggling the exact set of tiles reverses the board to solved!
+            let minSteps = 2;
+            let maxSteps = 4;
+
+            if (dim === 3) {
+                minSteps = 1 + Math.floor(lvl / 7);
+                maxSteps = 3 + Math.floor(lvl / 5);
+            } else if (dim === 4) {
+                minSteps = 3 + Math.floor((lvl - 25) / 25);
+                maxSteps = 5 + Math.floor((lvl - 25) / 18);
+            } else if (dim === 5) {
+                minSteps = 5 + Math.floor((lvl - 150) / 40);
+                maxSteps = 8 + Math.floor((lvl - 150) / 25);
+            } else {
+                minSteps = 7 + Math.floor((lvl - 400) / 20);
+                maxSteps = 11 + Math.floor((lvl - 400) / 15);
+            }
+
+            // Cap steps appropriately for fun
+            minSteps = Math.min(minSteps, 12);
+            maxSteps = Math.min(Math.max(minSteps + 1, maxSteps), 18);
+
+            return { dimension: dim, minSteps, maxSteps };
+        }
+
+        /**
+         * Setup a Level deterministically
+         */
+        function loadLevel(lvl) {
+            if (lvl < 1) lvl = 1;
+            if (lvl > TOTAL_LEVELS) lvl = TOTAL_LEVELS;
+            currentLevel = lvl;
+            localStorage.setItem('flora_current_level', currentLevel);
+
+            const config = getLevelConfig(lvl);
+            gridDimension = config.dimension;
+
+            // Seeded RNG based on level number
+            const rng = mulberry32(lvl * 7919 + 104729);
+
+            // Initialize all cells as BLOOMED (True)
+            board = Array(gridDimension).fill(null).map(() => Array(gridDimension).fill(true));
+            moveHistory = [];
+            movesMade = 0;
+            hintTile = null;
+            document.getElementById('hintToast').classList.add('hidden');
+
+            // Determine randomized scramble moves to make it solvable
+            const totalCells = gridDimension * gridDimension;
+            const steps = config.minSteps + Math.floor(rng() * (config.maxSteps - config.minSteps + 1));
+            
+            // To prevent immediate trivial undoing in generation, track toggled indices mod 2
+            const toggledMap = new Map();
+
+            let applied = 0;
+            let attempts = 0;
+            while (applied < steps && attempts < 100) {
+                attempts++;
+                const r = Math.floor(rng() * gridDimension);
+                const c = Math.floor(rng() * gridDimension);
+                const key = `${r},${c}`;
+                
+                // Toggle in generation
+                toggledMap.set(key, !(toggledMap.get(key) || false));
+                simulateToggle(r, c);
+                applied++;
+            }
+
+            // Extract the minimal solution path from toggledMap
+            solutionClicks = [];
+            toggledMap.forEach((isToggled, key) => {
+                if (isToggled) {
+                    const [r, c] = key.split(',').map(Number);
+                    solutionClicks.push({ r, c });
+                }
+            });
+
+            // If by rare chance it unscrambled into already won, force at least one corner toggle
+            if (isBoardWon() || solutionClicks.length === 0) {
+                simulateToggle(0, 0);
+                solutionClicks.push({ r: 0, c: 0 });
+            }
+
+            parMoves = Math.max(1, solutionClicks.length);
+
+            // Save initial state to reset easily
+            window.initialBoardState = JSON.parse(JSON.stringify(board));
+            window.initialSolution = [...solutionClicks];
+
+            renderHeaderAndStats();
+            renderBoardGrid();
+        }
+
+        /**
+         * Toggle helper for board logic without triggering audio or counting player moves
+         */
+        function simulateToggle(row, col) {
+            const directions = [
+                [0, 0],   // self
+                [-1, 0],  // up
+                [1, 0],   // down
+                [0, -1],  // left
+                [0, 1]    // right
+            ];
+
+            directions.forEach(([dr, dc]) => {
+                const nr = row + dr;
+                const nc = col + dc;
+                if (nr >= 0 && nr < gridDimension && nc >= 0 && nc < gridDimension) {
+                    board[nr][nc] = !board[nr][nc];
+                }
+            });
+        }
+
+        /**
+         * Player tile interaction
+         */
+        function onTileClick(r, c) {
+            // Save state for undo
+            moveHistory.push(JSON.parse(JSON.stringify(board)));
+            movesMade++;
+
+            // Sound
+            const pitch = 0.8 + (r + c) * 0.1;
+            sound.playLeafClick(pitch);
+
+            // Update board
+            simulateToggle(r, c);
+
+            // Track hint reduction if player followed suggested solution
+            const solIndex = solutionClicks.findIndex(item => item.r === r && item.c === c);
+            if (solIndex !== -1) {
+                solutionClicks.splice(solIndex, 1);
+            } else {
+                solutionClicks.push({ r, c });
+            }
+
+            // Clear active hint visual
+            if (hintTile) {
+                hintTile = null;
+                document.getElementById('hintToast').classList.add('hidden');
+            }
+
+            updateTilesDisplay();
+            updateStatsUI();
+
+            // Check Win Condition: All tiles are true (bloomed)
+            if (isBoardWon()) {
+                setTimeout(handleWin, 250);
+            }
+        }
+
+        function isBoardWon() {
+            for (let r = 0; r < gridDimension; r++) {
+                for (let c = 0; c < gridDimension; c++) {
+                    if (!board[r][c]) return false;
+                }
+            }
+            return true;
+        }
+
+        /**
+         * Render the visual grid of tiles
+         */
+        function renderBoardGrid() {
+            const container = document.getElementById('gridContainer');
+            container.innerHTML = '';
+
+            // Set grid template columns
+            container.style.gridTemplateColumns = `repeat(${gridDimension}, minmax(0, 1fr))`;
+            container.style.gridTemplateRows = `repeat(${gridDimension}, minmax(0, 1fr))`;
+
+            for (let r = 0; r < gridDimension; r++) {
+                for (let c = 0; c < gridDimension; c++) {
+                    const tileBtn = document.createElement('button');
+                    tileBtn.dataset.row = r;
+                    tileBtn.dataset.col = c;
+                    tileBtn.id = `tile-${r}-${c}`;
+                    tileBtn.className = `tile rounded-2xl flex items-center justify-center cursor-pointer transition-all ${
+                        board[r][c] ? 'tile-bloomed' : 'tile-dormant'
+                    }`;
+
+                    // Inner flower / seed icon
+                    const icon = document.createElement('i');
+                    icon.className = board[r][c] 
+                        ? 'fa-solid fa-spa text-emerald-100 text-lg sm:text-xl drop-shadow' 
+                        : 'fa-solid fa-circle-dot text-emerald-900/60 text-xs sm:text-sm';
+                    tileBtn.appendChild(icon);
+
+                    // Touch and click handlers
+                    tileBtn.addEventListener('click', () => onTileClick(r, c));
+
+                    container.appendChild(tileBtn);
+                }
+            }
+        }
+
+        /**
+         * Quick update of DOM tile elements without rebuild
+         */
+        function updateTilesDisplay() {
+            for (let r = 0; r < gridDimension; r++) {
+                for (let c = 0; c < gridDimension; c++) {
+                    const tileBtn = document.getElementById(`tile-${r}-${c}`);
+                    if (!tileBtn) continue;
+
+                    const isBloomed = board[r][c];
+                    const isHinted = hintTile && hintTile.r === r && hintTile.c === c;
+
+                    // Update class
+                    tileBtn.className = `tile rounded-2xl flex items-center justify-center cursor-pointer transition-all ${
+                        isBloomed ? 'tile-bloomed' : 'tile-dormant'
+                    } ${isHinted ? 'ring-4 ring-amber-400 animate-pulse' : ''}`;
+
+                    const icon = tileBtn.querySelector('i');
+                    if (icon) {
+                        icon.className = isBloomed 
+                            ? 'fa-solid fa-spa text-emerald-100 text-lg sm:text-xl drop-shadow' 
+                            : 'fa-solid fa-circle-dot text-emerald-900/60 text-xs sm:text-sm';
+                    }
+                }
+            }
+        }
+
+        function renderHeaderAndStats() {
+            document.getElementById('levelLabel').textContent = `Bana ${currentLevel}`;
+            document.getElementById('levelHeaderTag').textContent = `Bana ${currentLevel}`;
+            document.getElementById('gridSizeLabel').textContent = `${gridDimension}x${gridDimension}`;
+            document.getElementById('parMoves').textContent = parMoves;
+            updateStatsUI();
+        }
+
+        function updateStatsUI() {
+            document.getElementById('movesCount').textContent = movesMade;
+            document.getElementById('undoBtn').disabled = moveHistory.length === 0;
+
+            // Calculate percentage of bloomed tiles
+            let bloomedCount = 0;
+            const total = gridDimension * gridDimension;
+            for (let r = 0; r < gridDimension; r++) {
+                for (let c = 0; c < gridDimension; c++) {
+                    if (board[r][c]) bloomedCount++;
+                }
+            }
+            const pct = Math.round((bloomedCount / total) * 100);
+            document.getElementById('bloomedStat').textContent = `${pct}%`;
+        }
+
+        /**
+         * Undo Feature
+         */
+        function handleUndo() {
+            if (moveHistory.length === 0) return;
+            board = moveHistory.pop();
+            movesMade = Math.max(0, movesMade - 1);
+            sound.playLeafClick(0.7);
+            updateTilesDisplay();
+            updateStatsUI();
+        }
+
+        /**
+         * Reset Feature
+         */
+        function handleReset() {
+            if (window.initialBoardState) {
+                board = JSON.parse(JSON.stringify(window.initialBoardState));
+                solutionClicks = [...window.initialSolution];
+                moveHistory = [];
+                movesMade = 0;
+                hintTile = null;
+                document.getElementById('hintToast').classList.add('hidden');
+                sound.playLeafClick(0.6);
+                updateTilesDisplay();
+                updateStatsUI();
+            }
+        }
+
+        /**
+         * Hint Feature
+         */
+        function handleHint() {
+            if (solutionClicks.length > 0) {
+                hintTile = solutionClicks[0];
+                document.getElementById('hintToast').classList.remove('hidden');
+                updateTilesDisplay();
+                sound.playLeafClick(1.4);
+            }
+        }
+
+        /**
+         * Victory Trigger
+         */
+        function handleWin() {
+            sound.playBloomHarp();
+            triggerFlowerConfetti();
+
+            // Calculate stars (3 stars = par or better, 2 stars = within par + 3, 1 star = completed)
+            let stars = 1;
+            if (movesMade <= parMoves) {
+                stars = 3;
+            } else if (movesMade <= parMoves + 3) {
+                stars = 2;
+            }
+
+            // Save record
+            const prev = levelData[currentLevel] || { completed: false, stars: 0, bestMoves: 9999 };
+            levelData[currentLevel] = {
+                completed: true,
+                stars: Math.max(prev.stars, stars),
+                bestMoves: Math.min(prev.bestMoves, movesMade)
+            };
+            localStorage.setItem('flora_levels_record', JSON.stringify(levelData));
+
+            // Populate win dialog
+            document.getElementById('winMoves').textContent = movesMade;
+            document.getElementById('winPar').textContent = parMoves;
+
+            const starsContainer = document.getElementById('winStars');
+            starsContainer.innerHTML = '';
+            for (let i = 1; i <= 3; i++) {
+                const star = document.createElement('i');
+                if (i <= stars) {
+                    star.className = 'fa-solid fa-star text-amber-400 drop-shadow-md animate-bounce';
+                    star.style.animationDelay = `${i * 120}ms`;
+                } else {
+                    star.className = 'fa-regular fa-star text-forest-700';
+                }
+                starsContainer.appendChild(star);
+            }
+
+            // Show victory modal
+            document.getElementById('winModal').classList.remove('hidden');
+        }
+
+        /**
+         * Floating Leaves & Confetti Particle System
+         */
+        const confettiCanvas = document.getElementById('confettiCanvas');
+        const ctx = confettiCanvas.getContext('2d');
+        let particles = [];
+
+        function resizeCanvas() {
+            confettiCanvas.width = window.innerWidth;
+            confettiCanvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        function triggerFlowerConfetti() {
+            particles = [];
+            const colors = ['#10b981', '#34d399', '#6ee7b7', '#f59e0b', '#fbbf24', '#f472b6', '#a7f3d0'];
+            for (let i = 0; i < 90; i++) {
+                particles.push({
+                    x: confettiCanvas.width / 2,
+                    y: confettiCanvas.height / 2,
+                    vx: (Math.random() - 0.5) * 14,
+                    vy: (Math.random() - 0.7) * 16,
+                    size: Math.random() * 8 + 4,
+                    color: colors[Math.floor(Math.random() * colors.length)],
+                    angle: Math.random() * 360,
+                    rotationSpeed: (Math.random() - 0.5) * 8,
+                    opacity: 1,
+                    decay: Math.random() * 0.015 + 0.008
+                });
+            }
+            animateParticles();
+        }
+
+        let animationFrameId = null;
+        function animateParticles() {
+            if (particles.length === 0) return;
+            ctx.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
+
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                p.vy += 0.35; // gravity
+                p.angle += p.rotationSpeed;
+                p.opacity -= p.decay;
+
+                if (p.opacity <= 0) {
+                    particles.splice(i, 1);
+                    continue;
+                }
+
+                ctx.save();
+                ctx.translate(p.x, p.y);
+                ctx.rotate((p.angle * Math.PI) / 180);
+                ctx.globalAlpha = Math.max(0, p.opacity);
+                ctx.fillStyle = p.color;
+
+                // Draw organic petal shape
+                ctx.beginPath();
+                ctx.ellipse(0, 0, p.size, p.size * 0.5, 0, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }
+
+            if (particles.length > 0) {
+                animationFrameId = requestAnimationFrame(animateParticles);
+            } else {
+                ctx.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
+            }
+        }
+
+        /**
+         * Ambient Background Fireflies
+         */
+        function spawnFireflies() {
+            const container = document.getElementById('ambientContainer');
+            container.innerHTML = '';
+            for (let i = 0; i < 18; i++) {
+                const fly = document.createElement('div');
+                fly.className = 'ambient-firefly';
+                fly.style.left = `${Math.random() * 100}vw`;
+                fly.style.animationDuration = `${10 + Math.random() * 12}s`;
+                fly.style.animationDelay = `${Math.random() * 8}s`;
+                fly.style.opacity = (Math.random() * 0.7 + 0.2).toString();
+                container.appendChild(fly);
+            }
+        }
+
+        /**
+         * Level Selector Modal Logic with Pagination (50 levels per page)
+         */
+        function openLevelModal() {
+            modalPage = Math.floor((currentLevel - 1) / 50);
+            renderLevelModalGrid();
+            document.getElementById('levelModal').classList.remove('hidden');
+        }
+
+        function closeLevelModal() {
+            document.getElementById('levelModal').classList.add('hidden');
+        }
+
+        function renderLevelModalGrid() {
+            const grid = document.getElementById('levelGridList');
+            grid.innerHTML = '';
+
+            const startLvl = modalPage * 50 + 1;
+            const endLvl = Math.min(startLvl + 49, TOTAL_LEVELS);
+
+            document.getElementById('pageRangeLabel').textContent = `Bana ${startLvl} - ${endLvl}`;
+            document.getElementById('prevPageBtn').disabled = modalPage === 0;
+            document.getElementById('nextPageBtn').disabled = endLvl >= TOTAL_LEVELS;
+
+            // Calculate total stars & completions
+            let totalDone = 0;
+            let totalStars = 0;
+            for (let i = 1; i <= TOTAL_LEVELS; i++) {
+                if (levelData[i] && levelData[i].completed) {
+                    totalDone++;
+                    totalStars += levelData[i].stars || 0;
+                }
+            }
+            document.getElementById('completedCount').textContent = totalDone;
+            document.getElementById('totalStarsCount').textContent = totalStars;
+
+            for (let lvl = startLvl; lvl <= endLvl; lvl++) {
+                const btn = document.createElement('button');
+                const isCurr = lvl === currentLevel;
+                const rec = levelData[lvl];
+                const isCompleted = rec && rec.completed;
+                const starsCount = rec ? rec.stars : 0;
+
+                btn.className = `flex flex-col items-center justify-center p-2 rounded-2xl text-xs font-bold transition-all relative border ${
+                    isCurr 
+                        ? 'bg-emerald-600/40 border-emerald-400 text-white shadow-lg shadow-emerald-500/20 ring-2 ring-emerald-400' 
+                        : isCompleted 
+                        ? 'bg-forest-800/80 border-emerald-600/50 text-emerald-100 hover:bg-forest-700' 
+                        : 'bg-forest-950/60 border-forest-800 text-emerald-400/50 hover:bg-forest-900'
+                }`;
+
+                // Label
+                const label = document.createElement('span');
+                label.textContent = lvl;
+                btn.appendChild(label);
+
+                // Small Star Badge
+                const starBox = document.createElement('div');
+                starBox.className = 'flex items-center space-x-0.5 mt-1 text-[8px]';
+                for (let s = 1; s <= 3; s++) {
+                    const st = document.createElement('i');
+                    if (s <= starsCount) {
+                        st.className = 'fa-solid fa-star text-amber-400';
+                    } else {
+                        st.className = 'fa-solid fa-star text-forest-800';
+                    }
+                    starBox.appendChild(st);
+                }
+                btn.appendChild(starBox);
+
+                btn.addEventListener('click', () => {
+                    loadLevel(lvl);
+                    closeLevelModal();
+                });
+
+                grid.appendChild(btn);
+            }
+        }
+
+        /**
+         * Setup Event Listeners
+         */
+        function setupEventListeners() {
+            // Sound button toggle
+            const soundBtn = document.getElementById('soundBtn');
+            const soundIcon = document.getElementById('soundIcon');
+            const updateSoundIcon = (muted) => {
+                if (muted) {
+                    soundIcon.className = 'fa-solid fa-volume-xmark text-forest-500 text-sm';
+                } else {
+                    soundIcon.className = 'fa-solid fa-volume-high text-emerald-300 text-sm';
+                }
+            };
+            updateSoundIcon(sound.isMuted);
+
+            soundBtn.addEventListener('click', () => {
+                const muted = sound.toggleMute();
+                updateSoundIcon(muted);
+            });
+
+            // Undo, Reset, Hint buttons
+            document.getElementById('undoBtn').addEventListener('click', handleUndo);
+            document.getElementById('resetBtn').addEventListener('click', handleReset);
+            document.getElementById('hintBtn').addEventListener('click', handleHint);
+
+            // Modal Triggers
+            document.getElementById('openLevelsBtn').addEventListener('click', openLevelModal);
+            document.getElementById('navBtn').addEventListener('click', openLevelModal);
+            document.getElementById('closeLevelModalBtn').addEventListener('click', closeLevelModal);
+
+            // Modal Pagination
+            document.getElementById('prevPageBtn').addEventListener('click', () => {
+                if (modalPage > 0) {
+                    modalPage--;
+                    renderLevelModalGrid();
+                }
+            });
+
+            document.getElementById('nextPageBtn').addEventListener('click', () => {
+                if ((modalPage + 1) * 50 < TOTAL_LEVELS) {
+                    modalPage++;
+                    renderLevelModalGrid();
+                }
+            });
+
+            // Jump to level input
+            const handleJump = () => {
+                const val = parseInt(document.getElementById('levelSearchInput').value);
+                if (!isNaN(val) && val >= 1 && val <= TOTAL_LEVELS) {
+                    loadLevel(val);
+                    closeLevelModal();
+                    document.getElementById('levelSearchInput').value = '';
+                }
+            };
+            document.getElementById('jumpLevelBtn').addEventListener('click', handleJump);
+            document.getElementById('levelSearchInput').addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') handleJump();
+            });
+
+            // Win Modal Buttons
+            document.getElementById('winReplayBtn').addEventListener('click', () => {
+                document.getElementById('winModal').classList.add('hidden');
+                handleReset();
+            });
+
+            document.getElementById('winNextBtn').addEventListener('click', () => {
+                document.getElementById('winModal').classList.add('hidden');
+                loadLevel(currentLevel + 1);
+            });
+
+            // Close modals with Escape
+            window.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') {
+                    closeLevelModal();
+                    document.getElementById('winModal').classList.add('hidden');
+                }
+            });
+        }
+
+        // Initialize application on page load
+        window.onload = function () {
+            spawnFireflies();
+            setupEventListeners();
+            loadLevel(currentLevel);
+        };
+    </script>
+</body>
+</html>
