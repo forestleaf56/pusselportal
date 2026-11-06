@@ -1,0 +1,1363 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Royal Peg Solitaire • Brittisk Gentlemannasolitär</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Playfair+Display:ital,wght@0,600;0,800;1,400&family=Inter:wght@400;500;600;700&display=swap');
+
+    :root {
+      --font-cinzel: 'Cinzel', serif;
+      --font-playfair: 'Playfair Display', serif;
+    }
+
+    body {
+      touch-action: manipulation;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-tap-highlight-color: transparent;
+      background: radial-gradient(circle at 50% 15%, #1e293b 0%, #0f172a 50%, #061e14 100%);
+      min-height: 100vh;
+      color: #f8fafc;
+      font-family: 'Inter', sans-serif;
+    }
+
+    .font-royal {
+      font-family: var(--font-cinzel);
+    }
+    .font-gentleman {
+      font-family: var(--font-playfair);
+    }
+
+    /* Viktorianskt trä- & mässingsbräde */
+    .board-frame {
+      background: radial-gradient(circle at center, #3b1d11 0%, #241108 70%, #120703 100%);
+      box-shadow: 
+        0 0 0 3px #92400e,
+        0 0 0 6px #d97706,
+        0 0 0 9px #78350f,
+        0 18px 40px -10px rgba(0, 0, 0, 0.9),
+        inset 0 3px 12px rgba(0, 0, 0, 0.95);
+      border-radius: 2rem;
+    }
+
+    /* Solitärhål */
+    .board-hole {
+      background: radial-gradient(circle at 50% 65%, #0a0402 0%, #170904 65%, #2a1107 100%);
+      box-shadow: 
+        inset 0 4px 7px rgba(0, 0, 0, 0.95),
+        inset 0 -1px 2px rgba(217, 119, 6, 0.3),
+        0 1px 1px rgba(255, 255, 255, 0.08);
+      position: relative;
+    }
+
+    /* Målglyf med pulserande guldring vid giltigt drag */
+    .target-active {
+      box-shadow: 
+        inset 0 0 10px #f59e0b,
+        0 0 14px #f59e0b,
+        0 0 25px rgba(245, 158, 11, 0.6) !important;
+      animation: pulseGold 1.2s infinite ease-in-out;
+    }
+
+    @keyframes pulseGold {
+      0%, 100% { transform: scale(0.96); opacity: 0.85; }
+      50% { transform: scale(1.06); opacity: 1; }
+    }
+
+    /* Kulor (Pegs) med 3D-djup */
+    .peg-sphere {
+      border-radius: 9999px;
+      transition: transform 0.16s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.16s ease;
+      cursor: grab;
+      position: relative;
+    }
+
+    .peg-sphere:active {
+      cursor: grabbing;
+    }
+
+    /* Kula vald (lyftes upp) */
+    .peg-selected {
+      transform: translateY(-8px) scale(1.15) !important;
+      filter: drop-shadow(0 14px 12px rgba(0,0,0,0.8)) drop-shadow(0 0 12px #fbbf24);
+      z-index: 30;
+    }
+
+    /* Kula som ges i tips */
+    .peg-hinted {
+      animation: hintBounce 0.9s infinite alternate cubic-bezier(0.45, 0.05, 0.55, 0.95);
+      filter: drop-shadow(0 0 14px #f59e0b);
+    }
+    @keyframes hintBounce {
+      0% { transform: scale(1); }
+      100% { transform: scale(1.14) translateY(-5px); }
+    }
+
+    /* Juvelteman för kulorna */
+    .theme-ruby {
+      background: radial-gradient(circle at 30% 28%, #fca5a5 0%, #ef4444 26%, #b91c1c 60%, #450a0a 100%);
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.7), inset 0 -2px 4px rgba(0,0,0,0.6);
+      border: 1px solid rgba(254, 202, 202, 0.3);
+    }
+    .theme-racing-green {
+      background: radial-gradient(circle at 30% 28%, #86efac 0%, #15803d 28%, #064e3b 65%, #022c22 100%);
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.7), inset 0 -2px 4px rgba(0,0,0,0.6);
+      border: 1px solid rgba(187, 247, 208, 0.3);
+    }
+    .theme-brass {
+      background: radial-gradient(circle at 30% 28%, #fef08a 0%, #f59e0b 28%, #b45309 65%, #451a03 100%);
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.7), inset 0 -2px 4px rgba(0,0,0,0.6);
+      border: 1px solid rgba(254, 240, 138, 0.5);
+    }
+    .theme-royal-blue {
+      background: radial-gradient(circle at 30% 28%, #93c5fd 0%, #2563eb 28%, #1e3a8a 65%, #091e42 100%);
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.7), inset 0 -2px 4px rgba(0,0,0,0.6);
+      border: 1px solid rgba(191, 219, 254, 0.4);
+    }
+
+    /* Mässingsknappar */
+    .btn-brass {
+      background: linear-gradient(180deg, #d97706 0%, #b45309 50%, #78350f 100%);
+      border: 1px solid #fcd34d;
+      box-shadow: 0 3px 6px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.4);
+      transition: all 0.12s ease;
+    }
+    .btn-brass:active {
+      transform: translateY(2px);
+      box-shadow: 0 1px 2px rgba(0,0,0,0.6), inset 0 2px 4px rgba(0,0,0,0.4);
+    }
+
+    .btn-navy {
+      background: linear-gradient(180deg, #334155 0%, #1e293b 60%, #0f172a 100%);
+      border: 1px solid #64748b;
+      box-shadow: 0 3px 6px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.2);
+    }
+    .btn-navy:active {
+      transform: translateY(2px);
+    }
+
+    /* Rullist för banväljaren */
+    ::-webkit-scrollbar {
+      width: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #0f172a;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #92400e;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body class="flex flex-col items-center justify-between min-h-screen px-3 py-2 md:py-6 select-none overflow-x-hidden">
+
+  <!-- TOPP-HEADER: Brittisk Monarkisk Identitet -->
+  <header class="w-full max-w-md flex flex-col items-center gap-1.5 pt-1">
+    <div class="flex items-center justify-between w-full px-2">
+      <!-- Vänster: Nivåväljarknapp & Tema -->
+      <div class="flex items-center gap-2">
+        <button id="btn-open-levels" class="btn-brass px-2.5 py-1.5 rounded-lg flex items-center gap-1.5 text-xs font-bold text-amber-100 uppercase tracking-wider">
+          <svg class="w-4 h-4 fill-amber-200" viewBox="0 0 24 24"><path d="M4 6h16v2H4zm0 5h16v2H4zm0 5h16v2H4z"/></svg>
+          <span>Banor</span>
+        </button>
+        <button id="btn-toggle-theme" class="btn-navy px-2 py-1.5 rounded-lg text-xs text-amber-200 border border-amber-600/40 flex items-center" title="Byt pjäsfärg">
+          <span id="theme-icon" class="text-sm">💎</span>
+        </button>
+      </div>
+
+      <!-- Mitten: Titel med Brittisk Krona -->
+      <div class="text-center flex flex-col items-center">
+        <div class="flex items-center gap-1.5 text-amber-400">
+          <svg class="w-5 h-5 fill-amber-400 drop-shadow" viewBox="0 0 24 24">
+            <path d="M5 16L3 5l5.5 5L12 4l3.5 6L21 5l-2 11H5m14 3c0 .6-.4 1-1 1H6c-.6 0-1-.4-1-1v-1h14v1z"/>
+          </svg>
+          <h1 class="font-royal text-base md:text-lg font-bold tracking-widest text-amber-100 uppercase drop-shadow">
+            Royal Solitaire
+          </h1>
+          <svg class="w-5 h-5 fill-amber-400 drop-shadow" viewBox="0 0 24 24">
+            <path d="M5 16L3 5l5.5 5L12 4l3.5 6L21 5l-2 11H5m14 3c0 .6-.4 1-1 1H6c-.6 0-1-.4-1-1v-1h14v1z"/>
+          </svg>
+        </div>
+        <span id="tier-badge" class="text-[10px] uppercase tracking-wider text-amber-300 font-semibold px-2 py-0.5 rounded-full bg-amber-950/70 border border-amber-700/50">
+          Piccadilly Lärling
+        </span>
+      </div>
+
+      <!-- Höger: Ljud & Regler -->
+      <div class="flex items-center gap-2">
+        <button id="btn-sound" class="btn-navy p-1.5 rounded-lg text-amber-200 border border-amber-600/40" title="Ljud av/på">
+          <svg id="icon-sound-on" class="w-4 h-4 fill-amber-300" viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
+          <svg id="icon-sound-off" class="w-4 h-4 fill-red-400 hidden" viewBox="0 0 24 24"><path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27l4.73 4.73H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/></svg>
+        </button>
+        <button id="btn-rules" class="btn-navy p-1.5 rounded-lg text-amber-200 border border-amber-600/40" title="Spelregler">
+          <svg class="w-4 h-4 fill-amber-300" viewBox="0 0 24 24"><path d="M11 18h2v-2h-2v2zm1-16C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm0-14c-2.21 0-4 1.79-4 4h2c0-1.1.9-2 2-2s2 .9 2 2c0 2-3 1.75-3 5h2c0-2.25 3-2.5 3-5 0-2.21-1.79-4-4-4z"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- STATS-PANEL: Mässingsinfattad mahogny -->
+    <div class="w-full bg-slate-900/85 backdrop-blur-sm border border-amber-700/60 rounded-xl p-2.5 flex items-center justify-between text-center shadow-lg">
+      <div class="flex-1 border-r border-slate-700/80">
+        <div class="text-[10px] uppercase tracking-wider text-amber-400 font-medium">Bana</div>
+        <div id="stat-level" class="font-royal text-lg md:text-xl font-bold text-amber-100">1 / 500</div>
+      </div>
+      <div class="flex-1 border-r border-slate-700/80">
+        <div class="text-[10px] uppercase tracking-wider text-amber-400 font-medium">Pinnar kvar</div>
+        <div id="stat-pegs" class="font-royal text-lg md:text-xl font-bold text-emerald-300">--</div>
+      </div>
+      <div class="flex-1 border-r border-slate-700/80">
+        <div class="text-[10px] uppercase tracking-wider text-amber-400 font-medium">Drag</div>
+        <div id="stat-moves" class="font-royal text-lg md:text-xl font-bold text-amber-200">0</div>
+      </div>
+      <div class="flex-1">
+        <div class="text-[10px] uppercase tracking-wider text-amber-400 font-medium">Tid</div>
+        <div id="stat-timer" class="font-mono text-base md:text-lg font-bold text-slate-300">00:00</div>
+      </div>
+    </div>
+  </header>
+
+  <!-- SPELBRÄDE (Mobilanpassat 7x7) -->
+  <main class="w-full flex items-center justify-center my-auto py-2">
+    <div class="relative w-[92vw] max-w-[400px] aspect-square board-frame p-3 md:p-4 flex items-center justify-center">
+      
+      <!-- Dekorativ brittisk centrumgravyr (synlig när mitten är tom) -->
+      <div class="absolute inset-0 flex items-center justify-center pointer-events-none opacity-10">
+        <svg class="w-48 h-48 fill-amber-300" viewBox="0 0 100 100">
+          <circle cx="50" cy="50" r="45" fill="none" stroke="currentColor" stroke-width="1.5" stroke-dasharray="3,3"/>
+          <circle cx="50" cy="50" r="30" fill="none" stroke="currentColor" stroke-width="1"/>
+          <path d="M50 5 L50 95 M5 50 L95 50 M18 18 L82 82 M18 82 L82 18" stroke="currentColor" stroke-width="0.8"/>
+        </svg>
+      </div>
+
+      <!-- 7x7 Grid för Solitaire -->
+      <div id="board-grid" class="grid grid-cols-7 grid-rows-7 gap-1.5 md:gap-2 w-full h-full relative z-10">
+        <!-- Genereras dynamiskt via JS -->
+      </div>
+    </div>
+  </main>
+
+  <!-- VERKTYGSFÄLT: Ångra, Tips, Starta om, Föregående/Nästa bana -->
+  <footer class="w-full max-w-md pb-2">
+    <div class="grid grid-cols-5 gap-2 px-1">
+      <button id="btn-prev-level" class="btn-navy py-2.5 rounded-xl flex flex-col items-center justify-center gap-0.5 text-slate-200" title="Föregående bana">
+        <svg class="w-5 h-5 fill-amber-300" viewBox="0 0 24 24"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
+        <span class="text-[9px] uppercase tracking-wider font-semibold">Föreg</span>
+      </button>
+
+      <button id="btn-undo" class="btn-navy py-2.5 rounded-xl flex flex-col items-center justify-center gap-0.5 text-slate-200 disabled:opacity-40" title="Ångra drag">
+        <svg class="w-5 h-5 fill-amber-300" viewBox="0 0 24 24"><path d="M12.5 8c-2.65 0-5.05.99-6.9 2.6L2 7v9h9l-3.62-3.62c1.39-1.16 3.16-1.88 5.12-1.88 3.54 0 6.55 2.31 7.6 5.5l2.37-.78C21.08 11.03 17.15 8 12.5 8z"/></svg>
+        <span class="text-[9px] uppercase tracking-wider font-semibold">Ångra</span>
+      </button>
+
+      <button id="btn-hint" class="btn-brass py-2.5 rounded-xl flex flex-col items-center justify-center gap-0.5 text-amber-100" title="Få ett gentlemannatips">
+        <svg class="w-5 h-5 fill-amber-200" viewBox="0 0 24 24"><path d="M9 21c0 .55.45 1 1 1h4c.55 0 1-.45 1-1v-1H9v1zm3-19C8.14 2 5 5.14 5 9c0 2.38 1.19 4.47 3 5.74V17c0 .55.45 1 1 1h6c.55 0 1-.45 1-1v-2.26c1.81-1.27 3-3.36 3-5.74 0-3.86-3.14-7-7-7z"/></svg>
+        <span class="text-[9px] uppercase tracking-wider font-bold">Tips</span>
+      </button>
+
+      <button id="btn-reset" class="btn-navy py-2.5 rounded-xl flex flex-col items-center justify-center gap-0.5 text-slate-200" title="Starta om banan">
+        <svg class="w-5 h-5 fill-amber-300" viewBox="0 0 24 24"><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
+        <span class="text-[9px] uppercase tracking-wider font-semibold">Börja om</span>
+      </button>
+
+      <button id="btn-next-level" class="btn-navy py-2.5 rounded-xl flex flex-col items-center justify-center gap-0.5 text-slate-200" title="Nästa bana">
+        <svg class="w-5 h-5 fill-amber-300" viewBox="0 0 24 24"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>
+        <span class="text-[9px] uppercase tracking-wider font-semibold">Nästa</span>
+      </button>
+    </div>
+  </footer>
+
+  <!-- MODAL: BANVÄLJARE (500 BANOR) -->
+  <div id="modal-levels" class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex flex-col justify-end md:justify-center items-center p-0 md:p-4 hidden">
+    <div class="w-full max-w-lg bg-slate-900 border-t-2 md:border-2 border-amber-600 rounded-t-3xl md:rounded-3xl shadow-2xl flex flex-col max-h-[88vh] overflow-hidden">
+      <!-- Topp / Flikar -->
+      <div class="p-3 border-b border-amber-900/50 bg-slate-950 flex flex-col gap-2">
+        <div class="flex items-center justify-between">
+          <h2 class="font-royal text-base md:text-lg font-bold text-amber-200 uppercase tracking-wider flex items-center gap-2">
+            <span>🏛️</span> Välj bana (1 – 500)
+          </h2>
+          <button id="btn-close-levels" class="text-slate-400 hover:text-white p-1 text-xl font-bold">&times;</button>
+        </div>
+
+        <!-- Snabbhopp till bana -->
+        <div class="flex items-center gap-2">
+          <input id="input-jump-level" type="number" min="1" max="500" placeholder="Skriv ban-nr (1-500)..." class="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 text-sm text-amber-100 placeholder-slate-500 focus:outline-none focus:border-amber-500">
+          <button id="btn-jump-level" class="btn-brass px-3 py-1.5 rounded-lg text-xs font-bold text-amber-100">GÅ</button>
+        </div>
+
+        <!-- Flikväljare för de 4 Brittiska Divisionerna -->
+        <div class="grid grid-cols-4 gap-1 pt-1">
+          <button class="level-tab-btn active text-[10px] py-1.5 rounded font-bold uppercase transition-all bg-amber-700 text-amber-100" data-tier="1">1–100</button>
+          <button class="level-tab-btn text-[10px] py-1.5 rounded font-bold uppercase transition-all bg-slate-800 text-slate-300" data-tier="2">101–250</button>
+          <button class="level-tab-btn text-[10px] py-1.5 rounded font-bold uppercase transition-all bg-slate-800 text-slate-300" data-tier="3">251–400</button>
+          <button class="level-tab-btn text-[10px] py-1.5 rounded font-bold uppercase transition-all bg-slate-800 text-slate-300" data-tier="4">401–500</button>
+        </div>
+      </div>
+
+      <!-- Rutnät med banor -->
+      <div id="levels-grid" class="flex-1 overflow-y-auto p-3 grid grid-cols-5 sm:grid-cols-6 md:grid-cols-8 gap-2 bg-slate-900/90">
+        <!-- Fylls dynamiskt -->
+      </div>
+      
+      <!-- Modal Footer -->
+      <div class="p-2.5 bg-slate-950 border-t border-slate-800 text-center text-xs text-amber-400/80 font-medium">
+        Klarade banor markeras med stjärnor och kunglig guldring.
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: KUNGLIG SEGER -->
+  <div id="modal-victory" class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+    <div class="w-full max-w-sm bg-gradient-to-b from-slate-900 via-slate-900 to-[#102016] border-2 border-amber-500 rounded-3xl p-6 text-center shadow-2xl relative overflow-hidden">
+      <!-- Bakgrundsdekor -->
+      <div class="absolute -top-12 -right-12 w-32 h-32 bg-amber-500/10 rounded-full blur-2xl pointer-events-none"></div>
+
+      <div class="w-16 h-16 mx-auto mb-3 rounded-full bg-gradient-to-tr from-amber-600 to-yellow-300 flex items-center justify-center shadow-lg border border-yellow-200">
+        <svg class="w-9 h-9 fill-slate-950" viewBox="0 0 24 24"><path d="M5 16L3 5l5.5 5L12 4l3.5 6L21 5l-2 11H5m14 3c0 .6-.4 1-1 1H6c-.6 0-1-.4-1-1v-1h14v1z"/></svg>
+      </div>
+
+      <h2 class="font-royal text-2xl font-bold text-amber-300 uppercase tracking-widest drop-shadow">
+        Magnifikt!
+      </h2>
+      <p id="victory-subtitle" class="font-gentleman italic text-sm text-amber-100/90 mt-1">
+        En sann brittisk mästare har talat.
+      </p>
+
+      <!-- Stjärnor -->
+      <div id="victory-stars" class="flex justify-center gap-1.5 my-3 text-2xl text-amber-400">
+        ⭐⭐⭐
+      </div>
+
+      <!-- Resultat & Centerbonus -->
+      <div class="bg-slate-950/70 border border-amber-800/60 rounded-xl p-3 my-3 text-xs space-y-1.5">
+        <div class="flex justify-between text-slate-300">
+          <span>Tid:</span>
+          <span id="victory-time" class="font-mono font-bold text-amber-200">01:23</span>
+        </div>
+        <div class="flex justify-between text-slate-300">
+          <span>Antal drag:</span>
+          <span id="victory-moves" class="font-bold text-amber-200">14</span>
+        </div>
+        <div id="victory-center-bonus" class="hidden text-amber-300 font-semibold pt-1 border-t border-slate-800 flex items-center justify-center gap-1">
+          <span>⚜️ Kunglig Perfektion: Pinnens slutposition var precis i mitten!</span>
+        </div>
+      </div>
+
+      <div class="flex flex-col gap-2 mt-4">
+        <button id="btn-victory-next" class="btn-brass w-full py-3 rounded-xl font-royal text-sm font-bold text-amber-100 uppercase tracking-wider flex items-center justify-center gap-2">
+          <span>Nästa bana</span>
+          <svg class="w-4 h-4 fill-amber-100" viewBox="0 0 24 24"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>
+        </button>
+        <button id="btn-victory-replay" class="btn-navy w-full py-2.5 rounded-xl text-xs font-semibold text-slate-300">
+          Spela om banan
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: SPEL ÖVER (Inga drag kvar & > 1 pinne) -->
+  <div id="modal-gameover" class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+    <div class="w-full max-w-sm bg-slate-900 border-2 border-red-800/80 rounded-3xl p-6 text-center shadow-2xl">
+      <div class="w-14 h-14 mx-auto mb-3 rounded-full bg-red-950/80 border border-red-700/60 flex items-center justify-center text-2xl">
+        ♟️
+      </div>
+      <h2 class="font-royal text-xl font-bold text-red-300 uppercase tracking-wider">
+        Inga fler drag!
+      </h2>
+      <p id="gameover-text" class="text-xs text-slate-300 my-2">
+        Det återstår 3 pinnar på brädet. En gentleman ger dock aldrig upp!
+      </p>
+
+      <div class="flex flex-col gap-2 mt-4">
+        <button id="btn-gameover-undo" class="btn-brass w-full py-2.5 rounded-xl font-royal text-xs font-bold text-amber-100 uppercase tracking-wider">
+          Ångra senaste draget
+        </button>
+        <button id="btn-gameover-restart" class="btn-navy w-full py-2.5 rounded-xl text-xs font-semibold text-slate-300">
+          Börja om banan
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: REGLER & HISTORIK -->
+  <div id="modal-rules" class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+    <div class="w-full max-w-md bg-slate-900 border-2 border-amber-600 rounded-3xl p-5 shadow-2xl text-slate-200">
+      <div class="flex items-center justify-between pb-2 border-b border-amber-900/60">
+        <h3 class="font-royal text-base font-bold text-amber-300 flex items-center gap-2">
+          <span>📜</span> Den Engelska Solitärens Regler
+        </h3>
+        <button id="btn-close-rules" class="text-slate-400 hover:text-white text-xl font-bold">&times;</button>
+      </div>
+
+      <div class="space-y-3 py-3 text-xs leading-relaxed text-slate-300">
+        <p>
+          <strong class="text-amber-200">Målet:</strong> Rensa brädet så att <span class="text-amber-300 font-bold">endast en enda pinne</span> återstår.
+        </p>
+        <p>
+          <strong class="text-amber-200">Hur man hoppar:</strong> En pinne hoppar över en direkt intilliggande pinne till ett tomt hål två steg bort (horisontellt eller vertikalt). Pinnen du hoppade över tas bort.
+        </p>
+        <p>
+          <strong class="text-amber-200">Hur du styr:</strong> Klicka på en pinne för att lyfta den (guldmarkering). Klicka sedan på en av de pulserande ringarna för att hoppa. Du kan även dra och släppa pinnen.
+        </p>
+        <p>
+          <strong class="text-amber-200">Kunglig triumf:</strong> Om den sista pinnen landar i brädets absoluta centrumhål tilldelas du den hedersamma <em>Kungliga Perfektionen</em>!
+        </p>
+        <p class="border-t border-slate-800 pt-2 text-[11px] text-amber-400/80 font-gentleman italic">
+          Klassiskt engelskt sällskapsspel älskat vid hoven sedan 1600-talets slut. Samtliga 500 banor i detta spel är deterministiskt konstruerade och har garanterade lösningar!
+        </p>
+      </div>
+
+      <button id="btn-ack-rules" class="btn-brass w-full py-2.5 rounded-xl font-royal text-xs font-bold text-amber-100 uppercase tracking-wider mt-2">
+        Jag förstår, låt spelet börja
+      </button>
+    </div>
+  </div>
+
+  <!-- JAVASCRIPT: LOGIK, LJUD, 500 DETERMINISTISKA BANOR -->
+  <script>
+    /* ==========================================================================
+       1. LJUDMOTOR (Web Audio API - Syntetiskt Westminster & Klick)
+       ========================================================================== */
+    class BritishSoundEngine {
+      constructor() {
+        this.ctx = null;
+        this.enabled = true;
+      }
+
+      init() {
+        if (!this.ctx) {
+          const AudioContext = window.AudioContext || window.webkitAudioContext;
+          if (AudioContext) {
+            this.ctx = new AudioContext();
+          }
+        }
+        if (this.ctx && this.ctx.state === 'suspended') {
+          this.ctx.resume();
+        }
+      }
+
+      // Taktilt marmor-/träklack vid hopp
+      playClack() {
+        if (!this.enabled) return;
+        this.init();
+        if (!this.ctx) return;
+
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(360, now);
+        osc.frequency.exponentialRampToValueAtTime(110, now + 0.045);
+
+        gain.gain.setValueAtTime(0.35, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.045);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+
+        osc.start(now);
+        osc.stop(now + 0.05);
+      }
+
+      // Mjuk metallisk ton när en kula väljs
+      playSelect() {
+        if (!this.enabled) return;
+        this.init();
+        if (!this.ctx) return;
+
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(740, now);
+        osc.frequency.exponentialRampToValueAtTime(880, now + 0.04);
+
+        gain.gain.setValueAtTime(0.12, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.07);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+
+        osc.start(now);
+        osc.stop(now + 0.07);
+      }
+
+      // Gentlemannens klocka vid tips/ångra
+      playChime() {
+        if (!this.enabled) return;
+        this.init();
+        if (!this.ctx) return;
+
+        const now = this.ctx.currentTime;
+        [880, 1320].forEach((freq, idx) => {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(freq, now + idx * 0.06);
+
+          gain.gain.setValueAtTime(0.08, now + idx * 0.06);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.06 + 0.25);
+
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+
+          osc.start(now + idx * 0.06);
+          osc.stop(now + idx * 0.06 + 0.25);
+        });
+      }
+
+      // Big Ben / Westminster Quarters vid seger
+      playWestminsterFanfare() {
+        if (!this.enabled) return;
+        this.init();
+        if (!this.ctx) return;
+
+        const notes = [
+          { f: 415.30, d: 0.35 }, // G#4
+          { f: 369.99, d: 0.35 }, // F#4
+          { f: 329.63, d: 0.35 }, // E4
+          { f: 246.94, d: 0.55 }, // B3
+          { f: 82.41,  d: 1.20 }  // Big Ben djup gong (E2)
+        ];
+
+        let timeOffset = 0.05;
+        const now = this.ctx.currentTime;
+
+        notes.forEach((n, idx) => {
+          const osc = this.ctx.createOscillator();
+          const oscHar = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+
+          osc.type = idx === 4 ? 'sine' : 'sine';
+          osc.frequency.setValueAtTime(n.f, now + timeOffset);
+
+          // Subharmoniskt djup för Big Ben klockklang
+          oscHar.type = 'triangle';
+          oscHar.frequency.setValueAtTime(n.f * 1.5, now + timeOffset);
+
+          const vol = idx === 4 ? 0.4 : 0.22;
+          gain.gain.setValueAtTime(vol, now + timeOffset);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + timeOffset + n.d);
+
+          osc.connect(gain);
+          oscHar.connect(gain);
+          gain.connect(this.ctx.destination);
+
+          osc.start(now + timeOffset);
+          oscHar.start(now + timeOffset);
+          osc.stop(now + timeOffset + n.d);
+          oscHar.stop(now + timeOffset + n.d);
+
+          timeOffset += (idx === 3 ? 0.65 : 0.4);
+        });
+      }
+    }
+
+    /* ==========================================================================
+       2. DETERMINISTISK PRNG & GENERATOR FÖR 500 LÖSBARA BANOR
+       ========================================================================== */
+    // Mulberry32 ger 100% deterministisk sekvens per seed (bana)
+    function mulberry32(a) {
+      return function() {
+        let t = a += 0x6D2B79F5;
+        t = Math.imul(t ^ t >>> 15, t | 1);
+        t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+        return ((t ^ t >>> 14) >>> 0) / 4294967296;
+      };
+    }
+
+    // Standard Engelskt Solitärbräde (33 hål i ett 7x7 rutnät)
+    function isEnglishHole(r, c) {
+      if (r < 0 || r > 6 || c < 0 || c > 6) return false;
+      return (r >= 2 && r <= 4) || (c >= 2 && c <= 4);
+    }
+
+    // Europeiskt bräde (37 hål - lägger till de fyra inre hörnen)
+    function isEuropeanHole(r, c) {
+      if (isEnglishHole(r, c)) return true;
+      return (r === 1 && c === 1) || (r === 1 && c === 5) ||
+             (r === 5 && c === 1) || (r === 5 && c === 5);
+    }
+
+    /**
+     * Genererar en bana med baklängesmetoden (Reverse Jump Generation).
+     * Genom att starta från 1 vinnande pinne och endast utföra omvända hopp
+     * (där 1 pinne backar och lämnar 2 pinnar efter sig) är varje genererad bana
+     * 100% garanterat möjlig att lösa tillbaka till 1 pinne!
+     */
+    function generateDeterministicLevel(levelNum) {
+      // Nivå 500: Den legendariska fullständiga 32-pinnars solitärbanan
+      if (levelNum === 500) {
+        const board = Array(7).fill(0).map(() => Array(7).fill(-1));
+        for (let r = 0; r < 7; r++) {
+          for (let c = 0; c < 7; c++) {
+            if (isEnglishHole(r, c)) {
+              board[r][c] = (r === 3 && c === 3) ? 0 : 1;
+            }
+          }
+        }
+        return {
+          board,
+          isHoleFn: isEnglishHole,
+          targetPegs: 32,
+          minMoves: 31,
+          tierName: 'Kronjuvelsmästare'
+        };
+      }
+
+      // Bestäm svårighetsgrad (antal hopp) baserat på nivå
+      let movesTarget, isHoleFn, tierName;
+      if (levelNum <= 100) {
+        // Piccadilly Apprentice: 3 - 6 drag
+        movesTarget = 3 + Math.floor((levelNum - 1) * 4 / 100);
+        isHoleFn = isEnglishHole;
+        tierName = 'Piccadilly Lärling';
+      } else if (levelNum <= 250) {
+        // Baker Street Detective: 7 - 12 drag
+        movesTarget = 7 + Math.floor((levelNum - 101) * 6 / 150);
+        isHoleFn = isEnglishHole;
+        tierName = 'Baker Street Detektiv';
+      } else if (levelNum <= 400) {
+        // Westminster Strategist: 13 - 19 drag
+        movesTarget = 13 + Math.floor((levelNum - 251) * 7 / 150);
+        isHoleFn = (levelNum % 2 === 0) ? isEuropeanHole : isEnglishHole;
+        tierName = 'Westminster Strateg';
+      } else {
+        // Crown Jewel Master: 20 - 30 drag
+        movesTarget = 20 + Math.floor((levelNum - 401) * 10 / 99);
+        isHoleFn = (levelNum % 3 === 0) ? isEuropeanHole : isEnglishHole;
+        tierName = 'Kronjuvelsmästare';
+      }
+
+      const dirs = [
+        [-1, 0], [1, 0], [0, -1], [0, 1]
+      ];
+
+      // Försök med seedad generator tills vi har exakt movesTarget baklängeshopp
+      let attempt = 0;
+      while (attempt < 50) {
+        const rng = mulberry32(levelNum * 1337 + attempt * 7919);
+        
+        // Skapa tomt bräde
+        const b = Array(7).fill(0).map(() => Array(7).fill(-1));
+        for (let r = 0; r < 7; r++) {
+          for (let c = 0; c < 7; c++) {
+            if (isHoleFn(r, c)) b[r][c] = 0;
+          }
+        }
+
+        // Börja med 1 pinne i centrum (3,3)
+        b[3][3] = 1;
+
+        let stepsDone = 0;
+        for (let step = 0; step < movesTarget; step++) {
+          // Hitta alla giltiga omvända hopp:
+          // En pinne på (r,c) backar till (r + 2*dr, c + 2*dc) om både
+          // mellanpositionen och ursprunget är giltiga tomma hål!
+          const revMoves = [];
+          for (let r = 0; r < 7; r++) {
+            for (let c = 0; c < 7; c++) {
+              if (b[r][c] === 1) {
+                for (let d of dirs) {
+                  const overR = r + d[0];
+                  const overC = c + d[1];
+                  const fromR = r + d[0] * 2;
+                  const fromC = c + d[1] * 2;
+
+                  if (isHoleFn(overR, overC) && isHoleFn(fromR, fromC)) {
+                    if (b[overR][overC] === 0 && b[fromR][fromC] === 0) {
+                      revMoves.push({
+                        toR: r, toC: c,
+                        overR, overC,
+                        fromR, fromC
+                      });
+                    }
+                  }
+                }
+              }
+            }
+          }
+
+          if (revMoves.length === 0) {
+            break; // Kört fast, prova ny seed-förskjutning
+          }
+
+          // Välj deterministiskt bland de möjliga omvända hoppen
+          const pick = revMoves[Math.floor(rng() * revMoves.length)];
+          b[pick.toR][pick.toC] = 0;
+          b[pick.overR][pick.overC] = 1;
+          b[pick.fromR][pick.fromC] = 1;
+          stepsDone++;
+        }
+
+        if (stepsDone >= movesTarget) {
+          // Räkna pinnar
+          let count = 0;
+          for (let r = 0; r < 7; r++) {
+            for (let c = 0; c < 7; c++) {
+              if (b[r][c] === 1) count++;
+            }
+          }
+          return {
+            board: b,
+            isHoleFn,
+            targetPegs: count,
+            minMoves: movesTarget,
+            tierName
+          };
+        }
+        attempt++;
+      }
+
+      // Fallback om hög svårighet avbröts
+      return generateDeterministicLevel(Math.max(1, levelNum - 1));
+    }
+
+    /* ==========================================================================
+       3. SPELKLASS & STATE-HANTERING
+       ========================================================================== */
+    class PegSolitaireGame {
+      constructor() {
+        this.sound = new BritishSoundEngine();
+        this.themes = ['ruby', 'racing-green', 'brass', 'royal-blue'];
+        this.themeIndex = 0;
+
+        // Laddat tillstånd från localStorage
+        this.saveData = this.loadSaveData();
+        this.currentLevel = this.saveData.currentLevel || 1;
+        this.selectedPeg = null; // [r, c]
+        this.validTargets = [];  // Array of {r, c, midR, midC}
+        this.history = [];       // Stack för ångra
+        this.moveCount = 0;
+        this.timerSeconds = 0;
+        this.timerInterval = null;
+        this.activeTierTab = 1;
+
+        // Initiera UI-referenser
+        this.dom = {
+          board: document.getElementById('board-grid'),
+          statLevel: document.getElementById('stat-level'),
+          statPegs: document.getElementById('stat-pegs'),
+          statMoves: document.getElementById('stat-moves'),
+          statTimer: document.getElementById('stat-timer'),
+          tierBadge: document.getElementById('tier-badge'),
+          btnUndo: document.getElementById('btn-undo'),
+          btnHint: document.getElementById('btn-hint'),
+          btnReset: document.getElementById('btn-reset'),
+          btnPrev: document.getElementById('btn-prev-level'),
+          btnNext: document.getElementById('btn-next-level'),
+          btnOpenLevels: document.getElementById('btn-open-levels'),
+          btnCloseLevels: document.getElementById('btn-close-levels'),
+          modalLevels: document.getElementById('modal-levels'),
+          levelsGrid: document.getElementById('levels-grid'),
+          inputJump: document.getElementById('input-jump-level'),
+          btnJump: document.getElementById('btn-jump-level'),
+          modalVictory: document.getElementById('modal-victory'),
+          btnVictoryNext: document.getElementById('btn-victory-next'),
+          btnVictoryReplay: document.getElementById('btn-victory-replay'),
+          victoryTime: document.getElementById('victory-time'),
+          victoryMoves: document.getElementById('victory-moves'),
+          victoryStars: document.getElementById('victory-stars'),
+          victoryCenterBonus: document.getElementById('victory-center-bonus'),
+          modalGameOver: document.getElementById('modal-gameover'),
+          btnGameOverUndo: document.getElementById('btn-gameover-undo'),
+          btnGameOverRestart: document.getElementById('btn-gameover-restart'),
+          gameoverText: document.getElementById('gameover-text'),
+          btnSound: document.getElementById('btn-sound'),
+          iconSoundOn: document.getElementById('icon-sound-on'),
+          iconSoundOff: document.getElementById('icon-sound-off'),
+          btnTheme: document.getElementById('btn-toggle-theme'),
+          themeIcon: document.getElementById('theme-icon'),
+          btnRules: document.getElementById('btn-rules'),
+          modalRules: document.getElementById('modal-rules'),
+          btnCloseRules: document.getElementById('btn-close-rules'),
+          btnAckRules: document.getElementById('btn-ack-rules')
+        };
+
+        this.applySavedTheme();
+        this.attachEventListeners();
+        this.loadLevel(this.currentLevel);
+      }
+
+      // Spara & ladda framsteg
+      loadSaveData() {
+        try {
+          const raw = localStorage.getItem('royal_peg_solitaire_data_v1');
+          if (raw) return JSON.parse(raw);
+        } catch (e) {
+          console.warn('LocalStorage otillgänglig:', e);
+        }
+        return {
+          currentLevel: 1,
+          maxUnlocked: 1,
+          completed: {}, // level: { stars, bestTime, bestMoves }
+          theme: 'ruby',
+          sound: true
+        };
+      }
+
+      saveGame() {
+        try {
+          localStorage.setItem('royal_peg_solitaire_data_v1', JSON.stringify(this.saveData));
+        } catch (e) {}
+      }
+
+      vibrate(pattern = 20) {
+        try {
+          if ('vibrate' in navigator) navigator.vibrate(pattern);
+        } catch (e) {}
+      }
+
+      // Starta och uppdatera timer
+      startTimer() {
+        clearInterval(this.timerInterval);
+        this.timerSeconds = 0;
+        this.updateTimerDisplay();
+        this.timerInterval = setInterval(() => {
+          this.timerSeconds++;
+          this.updateTimerDisplay();
+        }, 1000);
+      }
+
+      stopTimer() {
+        clearInterval(this.timerInterval);
+      }
+
+      updateTimerDisplay() {
+        const m = Math.floor(this.timerSeconds / 60).toString().padStart(2, '0');
+        const s = (this.timerSeconds % 60).toString().padStart(2, '0');
+        this.dom.statTimer.textContent = `${m}:${s}`;
+      }
+
+      // Ladda bana
+      loadLevel(levelNum) {
+        this.currentLevel = Math.max(1, Math.min(500, levelNum));
+        this.saveData.currentLevel = this.currentLevel;
+        this.saveGame();
+
+        this.levelConfig = generateDeterministicLevel(this.currentLevel);
+        // Klona bräde
+        this.board = this.levelConfig.board.map(row => [...row]);
+        this.initialBoard = this.levelConfig.board.map(row => [...row]);
+        this.history = [];
+        this.moveCount = 0;
+        this.selectedPeg = null;
+        this.validTargets = [];
+
+        this.dom.statLevel.textContent = `${this.currentLevel} / 500`;
+        this.dom.tierBadge.textContent = this.levelConfig.tierName;
+        this.dom.statMoves.textContent = '0';
+        this.dom.btnUndo.disabled = true;
+
+        this.startTimer();
+        this.renderBoard();
+        this.updateStats();
+      }
+
+      renderBoard() {
+        this.dom.board.innerHTML = '';
+        const currentThemeClass = 'theme-' + this.themes[this.themeIndex];
+
+        for (let r = 0; r < 7; r++) {
+          for (let c = 0; c < 7; c++) {
+            const cellType = this.board[r][c];
+            const cellDiv = document.createElement('div');
+            cellDiv.dataset.r = r;
+            cellDiv.dataset.c = c;
+            cellDiv.className = 'w-full h-full flex items-center justify-center';
+
+            if (cellType === -1) {
+              // Utanför brädans form
+              cellDiv.classList.add('opacity-0', 'pointer-events-none');
+            } else {
+              // Giltigt solitärhål
+              const hole = document.createElement('div');
+              hole.className = 'w-[84%] h-[84%] rounded-full board-hole flex items-center justify-center relative cursor-pointer';
+
+              // Kontrollera om hålet är ett giltigt mål för den valda pinnen
+              const isTarget = this.validTargets.some(t => t.r === r && t.c === c);
+              if (isTarget) {
+                hole.classList.add('target-active');
+                // Central pulserande måldot
+                const dot = document.createElement('div');
+                dot.className = 'w-2 h-2 rounded-full bg-amber-400 shadow-[0_0_8px_#f59e0b]';
+                hole.appendChild(dot);
+              }
+
+              if (cellType === 1) {
+                // Pinne / Kula
+                const peg = document.createElement('div');
+                peg.className = `w-[86%] h-[86%] peg-sphere ${currentThemeClass}`;
+                
+                const isSelected = this.selectedPeg && this.selectedPeg[0] === r && this.selectedPeg[1] === c;
+                if (isSelected) {
+                  peg.classList.add('peg-selected');
+                }
+
+                hole.appendChild(peg);
+              }
+
+              // Klick- och touchhantering
+              hole.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.handleCellTap(r, c);
+              });
+
+              cellDiv.appendChild(hole);
+            }
+
+            this.dom.board.appendChild(cellDiv);
+          }
+        }
+      }
+
+      // Pekskärms- och klicklogik
+      handleCellTap(r, c) {
+        const val = this.board[r][c];
+
+        // 1. Spelaren trycker på ett tomt hål som är ett giltigt hopp-mål
+        if (val === 0 && this.selectedPeg) {
+          const move = this.validTargets.find(t => t.r === r && t.c === c);
+          if (move) {
+            this.executeMove(this.selectedPeg[0], this.selectedPeg[1], move);
+            return;
+          }
+        }
+
+        // 2. Spelaren trycker på en pinne
+        if (val === 1) {
+          // Om samma pinne trycks igen -> avmarkera
+          if (this.selectedPeg && this.selectedPeg[0] === r && this.selectedPeg[1] === c) {
+            this.selectedPeg = null;
+            this.validTargets = [];
+            this.sound.playSelect();
+            this.renderBoard();
+            return;
+          }
+
+          // Markera vald pinne & beräkna giltiga hopp
+          this.selectedPeg = [r, c];
+          this.validTargets = this.getMovesForPeg(r, c);
+          this.sound.playSelect();
+          this.vibrate(12);
+          this.renderBoard();
+          return;
+        }
+
+        // 3. Spelaren trycker på ett tomt hål som ej är giltigt -> avmarkera
+        if (this.selectedPeg) {
+          this.selectedPeg = null;
+          this.validTargets = [];
+          this.renderBoard();
+        }
+      }
+
+      // Hitta alla giltiga hopp för en specifik pinne
+      getMovesForPeg(r, c) {
+        const moves = [];
+        const dirs = [
+          [-1, 0], [1, 0], [0, -1], [0, 1]
+        ];
+
+        dirs.forEach(([dr, dc]) => {
+          const midR = r + dr;
+          const midC = c + dc;
+          const toR = r + dr * 2;
+          const toC = c + dc * 2;
+
+          if (toR >= 0 && toR < 7 && toC >= 0 && toC < 7) {
+            if (this.board[midR][midC] === 1 && this.board[toR][toC] === 0) {
+              moves.push({ r: toR, c: toC, midR, midC });
+            }
+          }
+        });
+        return moves;
+      }
+
+      // Utför ett godkänt solitärhopp
+      executeMove(fromR, fromC, target) {
+        // Spara i historikstacken för ångra
+        this.history.push({
+          fromR, fromC,
+          midR: target.midR, midC: target.midC,
+          toR: target.r, toC: target.c
+        });
+
+        // Uppdatera brädstatus
+        this.board[fromR][fromC] = 0;
+        this.board[target.midR][target.midC] = 0;
+        this.board[target.r][target.c] = 1;
+
+        this.moveCount++;
+        this.selectedPeg = null;
+        this.validTargets = [];
+        this.dom.btnUndo.disabled = false;
+
+        this.sound.playClack();
+        this.vibrate(28);
+
+        this.renderBoard();
+        this.updateStats();
+        this.checkGameConditions(target.r, target.c);
+      }
+
+      // Ångra senaste draget
+      undo() {
+        if (this.history.length === 0) return;
+        const last = this.history.pop();
+        this.board[last.fromR][last.fromC] = 1;
+        this.board[last.midR][last.midC] = 1;
+        this.board[last.toR][last.toC] = 0;
+
+        if (this.moveCount > 0) this.moveCount--;
+        this.selectedPeg = null;
+        this.validTargets = [];
+        this.dom.btnUndo.disabled = (this.history.length === 0);
+
+        this.sound.playChime();
+        this.vibrate(15);
+        this.renderBoard();
+        this.updateStats();
+
+        // Stäng eventuella "Inga drag kvar"-fönster
+        this.dom.modalGameOver.classList.add('hidden');
+      }
+
+      // Gentlemannatips: Hitta och belys ett giltigt drag
+      showHint() {
+        const allMoves = [];
+        for (let r = 0; r < 7; r++) {
+          for (let c = 0; c < 7; c++) {
+            if (this.board[r][c] === 1) {
+              const moves = this.getMovesForPeg(r, c);
+              if (moves.length > 0) {
+                allMoves.push({ r, c, targets: moves });
+              }
+            }
+          }
+        }
+
+        if (allMoves.length === 0) return;
+
+        // Välj ett drag deterministiskt
+        const chosen = allMoves[0];
+        this.selectedPeg = [chosen.r, chosen.c];
+        this.validTargets = chosen.targets;
+
+        this.sound.playChime();
+        this.vibrate([15, 40, 20]);
+        this.renderBoard();
+
+        // Lägg till pulserande animation på den rekommenderade pinnen
+        const selector = `div[data-r="${chosen.r}"][data-c="${chosen.c}"] .peg-sphere`;
+        const pegEl = document.querySelector(selector);
+        if (pegEl) {
+          pegEl.classList.add('peg-hinted');
+          setTimeout(() => pegEl.classList.remove('peg-hinted'), 2000);
+        }
+      }
+
+      // Starta om aktuell bana
+      resetLevel() {
+        this.board = this.initialBoard.map(row => [...row]);
+        this.history = [];
+        this.moveCount = 0;
+        this.selectedPeg = null;
+        this.validTargets = [];
+        this.dom.btnUndo.disabled = true;
+
+        this.startTimer();
+        this.renderBoard();
+        this.updateStats();
+        this.sound.playChime();
+      }
+
+      countRemainingPegs() {
+        let count = 0;
+        for (let r = 0; r < 7; r++) {
+          for (let c = 0; c < 7; c++) {
+            if (this.board[r][c] === 1) count++;
+          }
+        }
+        return count;
+      }
+
+      updateStats() {
+        const remaining = this.countRemainingPegs();
+        this.dom.statPegs.textContent = remaining;
+        this.dom.statMoves.textContent = this.moveCount;
+      }
+
+      // Kontrollera vinst eller förlust
+      checkGameConditions(lastPegR, lastPegC) {
+        const remaining = this.countRemainingPegs();
+
+        // VINST: Endast 1 pinne återstår!
+        if (remaining === 1) {
+          this.stopTimer();
+          this.handleVictory(lastPegR, lastPegC);
+          return;
+        }
+
+        // Finns det några giltiga drag kvar?
+        let hasMoves = false;
+        for (let r = 0; r < 7 && !hasMoves; r++) {
+          for (let c = 0; c < 7 && !hasMoves; c++) {
+            if (this.board[r][c] === 1) {
+              if (this.getMovesForPeg(r, c).length > 0) {
+                hasMoves = true;
+              }
+            }
+          }
+        }
+
+        // FÖRLUST: Fler än 1 pinne kvar och inga drag kan göras
+        if (!hasMoves) {
+          this.vibrate([40, 50, 40]);
+          this.dom.gameoverText.textContent = `Det återstår ${remaining} pinnar på brädet. En gentleman ger dock aldrig upp!`;
+          this.dom.modalGameOver.classList.remove('hidden');
+        }
+      }
+
+      handleVictory(finalR, finalC) {
+        this.sound.playWestminsterFanfare();
+        this.vibrate([60, 60, 80, 80, 140]);
+
+        // Beräkna stjärnor
+        const minM = this.levelConfig.minMoves;
+        let stars = 1;
+        if (this.moveCount <= minM) {
+          stars = 3;
+        } else if (this.moveCount <= minM + 3) {
+          stars = 2;
+        }
+
+        // Spara avklarad status & stjärnor
+        const isCenter = (finalR === 3 && finalC === 3);
+        const prevBest = this.saveData.completed[this.currentLevel];
+        const bestStars = prevBest ? Math.max(prevBest.stars, stars) : stars;
+
+        this.saveData.completed[this.currentLevel] = {
+          stars: bestStars,
+          bestTime: prevBest ? Math.min(prevBest.bestTime, this.timerSeconds) : this.timerSeconds,
+          bestMoves: prevBest ? Math.min(prevBest.bestMoves, this.moveCount) : this.moveCount,
+          centerBonus: isCenter || (prevBest && prevBest.centerBonus)
+        };
+
+        // Lås upp nästa nivå
+        if (this.currentLevel >= this.saveData.maxUnlocked && this.currentLevel < 500) {
+          this.saveData.maxUnlocked = this.currentLevel + 1;
+        }
+        this.saveGame();
+
+        // Uppdatera och visa vinstmodalen
+        const m = Math.floor(this.timerSeconds / 60).toString().padStart(2, '0');
+        const s = (this.timerSeconds % 60).toString().padStart(2, '0');
+        this.dom.victoryTime.textContent = `${m}:${s}`;
+        this.dom.victoryMoves.textContent = `${this.moveCount} (Optimalt: ${minM})`;
+
+        let starStr = '⭐';
+        if (stars === 2) starStr = '⭐⭐';
+        if (stars === 3) starStr = '⭐⭐⭐';
+        this.dom.victoryStars.textContent = starStr;
+
+        if (isCenter) {
+          this.dom.victoryCenterBonus.classList.remove('hidden');
+        } else {
+          this.dom.victoryCenterBonus.classList.add('hidden');
+        }
+
+        this.dom.modalVictory.classList.remove('hidden');
+      }
+
+      // Växla pjästema
+      toggleTheme() {
+        this.themeIndex = (this.themeIndex + 1) % this.themes.length;
+        const current = this.themes[this.themeIndex];
+        this.saveData.theme = current;
+        this.saveGame();
+        this.applySavedTheme();
+        this.renderBoard();
+        this.sound.playSelect();
+      }
+
+      applySavedTheme() {
+        const saved = this.saveData.theme || 'ruby';
+        const idx = this.themes.indexOf(saved);
+        if (idx !== -1) this.themeIndex = idx;
+
+        const icons = {
+          'ruby': '💎',
+          'racing-green': '🟢',
+          'brass': '🟡',
+          'royal-blue': '🔷'
+        };
+        this.dom.themeIcon.textContent = icons[this.themes[this.themeIndex]] || '💎';
+      }
+
+      // Rendera rutnätet i banväljaren
+      renderLevelsGrid(tier) {
+        this.activeTierTab = tier;
+        let start = 1, end = 100;
+        if (tier === 2) { start = 101; end = 250; }
+        if (tier === 3) { start = 251; end = 400; }
+        if (tier === 4) { start = 401; end = 500; }
+
+        this.dom.levelsGrid.innerHTML = '';
+
+        for (let i = start; i <= end; i++) {
+          const isUnlocked = i <= (this.saveData.maxUnlocked || 1);
+          const comp = this.saveData.completed[i];
+          const isCurrent = (i === this.currentLevel);
+
+          const btn = document.createElement('button');
+          btn.className = `p-2 rounded-xl flex flex-col items-center justify-center text-xs font-bold transition-all relative border ${
+            isCurrent 
+              ? 'bg-amber-600 border-amber-300 text-amber-50 shadow-[0_0_10px_#f59e0b]'
+              : comp 
+                ? 'bg-slate-800/90 border-emerald-600 text-emerald-200'
+                : isUnlocked 
+                  ? 'bg-slate-800 border-slate-700 text-slate-200 hover:border-amber-500'
+                  : 'bg-slate-950/70 border-slate-800/60 text-slate-600 opacity-60 cursor-not-allowed'
+          }`;
+
+          btn.innerHTML = `
+            <span class="text-xs">${i}</span>
+            <span class="text-[9px] h-3.5 mt-0.5">
+              ${comp ? '⭐'.repeat(comp.stars) : (isUnlocked ? '•' : '🔒')}
+            </span>
+          `;
+
+          if (isUnlocked) {
+            btn.addEventListener('click', () => {
+              this.loadLevel(i);
+              this.dom.modalLevels.classList.add('hidden');
+            });
+          }
+
+          this.dom.levelsGrid.appendChild(btn);
+        }
+      }
+
+      attachEventListeners() {
+        // Kontrollknappar
+        this.dom.btnUndo.addEventListener('click', () => this.undo());
+        this.dom.btnHint.addEventListener('click', () => this.showHint());
+        this.dom.btnReset.addEventListener('click', () => this.resetLevel());
+        this.dom.btnPrev.addEventListener('click', () => {
+          if (this.currentLevel > 1) this.loadLevel(this.currentLevel - 1);
+        });
+        this.dom.btnNext.addEventListener('click', () => {
+          if (this.currentLevel < (this.saveData.maxUnlocked || 1)) {
+            this.loadLevel(this.currentLevel + 1);
+          } else {
+            this.vibrate(30);
+          }
+        });
+
+        // Ljud av/på
+        this.dom.btnSound.addEventListener('click', () => {
+          this.sound.enabled = !this.sound.enabled;
+          this.saveData.sound = this.sound.enabled;
+          this.saveGame();
+          if (this.sound.enabled) {
+            this.dom.iconSoundOn.classList.remove('hidden');
+            this.dom.iconSoundOff.classList.add('hidden');
+            this.sound.playSelect();
+          } else {
+            this.dom.iconSoundOn.classList.add('hidden');
+            this.dom.iconSoundOff.classList.remove('hidden');
+          }
+        });
+
+        // Byta pjästema
+        this.dom.btnTheme.addEventListener('click', () => this.toggleTheme());
+
+        // Regler
+        this.dom.btnRules.addEventListener('click', () => this.dom.modalRules.classList.remove('hidden'));
+        this.dom.btnCloseRules.addEventListener('click', () => this.dom.modalRules.classList.add('hidden'));
+        this.dom.btnAckRules.addEventListener('click', () => this.dom.modalRules.classList.add('hidden'));
+
+        // Nivåväljare
+        this.dom.btnOpenLevels.addEventListener('click', () => {
+          let tier = 1;
+          if (this.currentLevel > 100) tier = 2;
+          if (this.currentLevel > 250) tier = 3;
+          if (this.currentLevel > 400) tier = 4;
+          
+          document.querySelectorAll('.level-tab-btn').forEach(btn => {
+            btn.classList.toggle('bg-amber-700', parseInt(btn.dataset.tier) === tier);
+            btn.classList.toggle('bg-slate-800', parseInt(btn.dataset.tier) !== tier);
+          });
+          this.renderLevelsGrid(tier);
+          this.dom.modalLevels.classList.remove('hidden');
+        });
+
+        this.dom.btnCloseLevels.addEventListener('click', () => {
+          this.dom.modalLevels.classList.add('hidden');
+        });
+
+        // Flikar i nivåväljaren
+        document.querySelectorAll('.level-tab-btn').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            document.querySelectorAll('.level-tab-btn').forEach(b => {
+              b.classList.remove('bg-amber-700', 'text-amber-100');
+              b.classList.add('bg-slate-800', 'text-slate-300');
+            });
+            btn.classList.add('bg-amber-700', 'text-amber-100');
+            btn.classList.remove('bg-slate-800', 'text-slate-300');
+            this.renderLevelsGrid(parseInt(btn.dataset.tier));
+          });
+        });
+
+        // Snabbhopp
+        const performJump = () => {
+          const val = parseInt(this.dom.inputJump.value);
+          if (val >= 1 && val <= 500) {
+            if (val <= (this.saveData.maxUnlocked || 1)) {
+              this.loadLevel(val);
+              this.dom.modalLevels.classList.add('hidden');
+            } else {
+              this.vibrate([40, 40]);
+            }
+          }
+        };
+        this.dom.btnJump.addEventListener('click', performJump);
+        this.dom.inputJump.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') performJump();
+        });
+
+        // Segermodal knappar
+        this.dom.btnVictoryNext.addEventListener('click', () => {
+          this.dom.modalVictory.classList.add('hidden');
+          if (this.currentLevel < 500) {
+            this.loadLevel(this.currentLevel + 1);
+          }
+        });
+        this.dom.btnVictoryReplay.addEventListener('click', () => {
+          this.dom.modalVictory.classList.add('hidden');
+          this.resetLevel();
+        });
+
+        // Game Over knappar
+        this.dom.btnGameOverUndo.addEventListener('click', () => {
+          this.undo();
+        });
+        this.dom.btnGameOverRestart.addEventListener('click', () => {
+          this.dom.modalGameOver.classList.add('hidden');
+          this.resetLevel();
+        });
+      }
+    }
+
+    // Starta spelet när sidan laddats
+    window.addEventListener('DOMContentLoaded', () => {
+      window.game = new PegSolitaireGame();
+    });
+  </script>
+</body>
+</html>

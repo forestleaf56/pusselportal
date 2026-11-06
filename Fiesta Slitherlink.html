@@ -1,0 +1,1614 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Fiesta Slitherlink - 500 Banor</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    body {
+      font-family: 'Fredoka', 'Inter', system-ui, sans-serif;
+      touch-action: manipulation;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    /* Mexikanska färger & mönster */
+    .bg-fiesta-dark {
+      background: radial-gradient(circle at 50% 20%, #2A173B 0%, #170E24 60%, #0F0819 100%);
+    }
+
+    /* Papel Picado Animation */
+    @keyframes sway {
+      0%, 100% { transform: rotate(-2deg); }
+      50% { transform: rotate(2deg); }
+    }
+    .sway-slow {
+      animation: sway 3.5s ease-in-out infinite;
+      transform-origin: top center;
+    }
+
+    /* Linje glöd */
+    .slither-line-active {
+      filter: drop-shadow(0 0 4px #FFB703) drop-shadow(0 0 8px #FF7A00);
+      stroke: #FFB703;
+      stroke-width: 6;
+      stroke-linecap: round;
+      transition: all 0.12s ease-out;
+    }
+
+    .slither-line-hint {
+      stroke: #00F5D4 !important;
+      filter: drop-shadow(0 0 6px #00F5D4);
+      animation: pulse-hint 1s infinite alternate;
+    }
+
+    .slither-line-error {
+      stroke: #EF233C !important;
+      filter: drop-shadow(0 0 6px #EF233C);
+      animation: pulse-error 0.5s infinite alternate;
+    }
+
+    @keyframes pulse-hint {
+      from { stroke-width: 5; opacity: 0.8; }
+      to { stroke-width: 8; opacity: 1; }
+    }
+
+    @keyframes pulse-error {
+      from { stroke-width: 5; opacity: 0.7; }
+      to { stroke-width: 8; opacity: 1; }
+    }
+
+    /* Edge touch target hover / tap */
+    .edge-hitbox {
+      cursor: pointer;
+      stroke: transparent;
+      stroke-width: 32;
+      stroke-linecap: round;
+      transition: stroke 0.1s;
+    }
+    .edge-hitbox:hover {
+      stroke: rgba(255, 183, 3, 0.25);
+    }
+
+    /* Siffra-status färger */
+    .clue-badge {
+      transition: all 0.2s ease;
+    }
+    .clue-satisfied {
+      fill: #06D6A0 !important;
+      filter: drop-shadow(0 0 5px rgba(6, 214, 160, 0.7));
+    }
+    .clue-over {
+      fill: #EF476F !important;
+      filter: drop-shadow(0 0 6px rgba(239, 71, 111, 0.9));
+      animation: shake 0.35s ease-in-out;
+    }
+
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-2px); }
+      75% { transform: translateX(2px); }
+    }
+
+    /* Skrollbar i banväljare */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #1D112B;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #FF7A00;
+      border-radius: 9999px;
+    }
+
+    /* Konfetti Canvas */
+    #confettiCanvas {
+      pointer-events: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: 100;
+    }
+  </style>
+</head>
+<body class="bg-fiesta-dark text-amber-50 min-h-screen flex flex-col justify-between overflow-x-hidden">
+
+  <!-- Konfettikanvas för vinst -->
+  <canvas id="confettiCanvas"></canvas>
+
+  <!-- ÖVERSTA BANDET: Papel Picado Banner -->
+  <header class="w-full relative select-none">
+    <div class="w-full flex justify-between items-center px-2 pt-1 pb-1 sway-slow overflow-hidden max-w-lg mx-auto opacity-95">
+      <!-- Färggranna papel picado-vimplar -->
+      <svg class="h-8 w-12 text-pink-500 fill-current drop-shadow" viewBox="0 0 50 35">
+        <polygon points="0,0 50,0 45,30 25,35 5,30"/>
+        <circle cx="25" cy="15" r="4" fill="#2A173B"/>
+      </svg>
+      <svg class="h-8 w-12 text-teal-400 fill-current drop-shadow" viewBox="0 0 50 35">
+        <polygon points="0,0 50,0 45,30 25,35 5,30"/>
+        <polygon points="20,10 30,10 25,22" fill="#2A173B"/>
+      </svg>
+      <svg class="h-8 w-12 text-yellow-400 fill-current drop-shadow" viewBox="0 0 50 35">
+        <polygon points="0,0 50,0 45,30 25,35 5,30"/>
+        <circle cx="25" cy="16" r="5" fill="#2A173B"/>
+      </svg>
+      <svg class="h-8 w-12 text-orange-500 fill-current drop-shadow" viewBox="0 0 50 35">
+        <polygon points="0,0 50,0 45,30 25,35 5,30"/>
+        <polygon points="18,12 32,12 25,24" fill="#2A173B"/>
+      </svg>
+      <svg class="h-8 w-12 text-purple-400 fill-current drop-shadow" viewBox="0 0 50 35">
+        <polygon points="0,0 50,0 45,30 25,35 5,30"/>
+        <circle cx="25" cy="15" r="4" fill="#2A173B"/>
+      </svg>
+      <svg class="h-8 w-12 text-emerald-400 fill-current drop-shadow" viewBox="0 0 50 35">
+        <polygon points="0,0 50,0 45,30 25,35 5,30"/>
+        <polygon points="20,10 30,10 25,20" fill="#2A173B"/>
+      </svg>
+    </div>
+
+    <!-- HUVUDBAR: Titel, bana, tid och snabbknappar -->
+    <div class="max-w-md mx-auto px-4 flex items-center justify-between mt-1">
+      <div class="flex items-center space-x-2">
+        <span class="text-2xl">🌵</span>
+        <div>
+          <div class="flex items-center space-x-2">
+            <h1 class="text-xl font-bold tracking-wide text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-orange-400 to-rose-400">
+              Slitherlink Fiesta
+            </h1>
+            <span id="levelBadge" class="text-xs bg-amber-500/20 text-amber-300 border border-amber-500/40 px-2 py-0.5 rounded-full font-semibold">
+              Bana 1
+            </span>
+          </div>
+          <div class="flex items-center space-x-2 text-xs text-orange-200/70">
+            <span id="difficultyLabel">Novato (5×5)</span>
+            <span>•</span>
+            <span id="timerText" class="font-mono text-amber-300">⏱️ 00:00</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex items-center space-x-2">
+        <!-- Ljudknapp -->
+        <button id="soundBtn" class="p-2 rounded-xl bg-purple-900/40 border border-purple-500/30 hover:bg-purple-800/50 text-amber-300 transition active:scale-95" title="Ljud av/på">
+          <span id="soundIcon" class="text-lg">🔊</span>
+        </button>
+        <!-- Regler -->
+        <button id="rulesBtn" class="p-2 rounded-xl bg-purple-900/40 border border-purple-500/30 hover:bg-purple-800/50 text-amber-300 transition active:scale-95" title="Regler">
+          <span class="text-lg">❓</span>
+        </button>
+        <!-- Banväljare -->
+        <button id="levelsBtn" class="flex items-center space-x-1 px-3 py-1.5 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 text-purple-950 font-bold text-sm shadow-md hover:from-orange-400 hover:to-amber-400 transition active:scale-95">
+          <span>Banor</span>
+          <span class="text-xs bg-purple-950/20 px-1 rounded">500</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- SPELOMRÅDE (Center) -->
+  <main class="flex-1 flex flex-col items-center justify-center p-2 relative w-full max-w-lg mx-auto">
+    <!-- Talavera-stil ram för brädet -->
+    <div class="w-full max-w-[420px] aspect-square p-2.5 rounded-3xl bg-gradient-to-br from-amber-600/30 via-purple-900/40 to-rose-600/30 border-2 border-amber-500/40 shadow-2xl relative flex items-center justify-center backdrop-blur-sm">
+      <!-- Hörn-dekorationer i mexikansk stil -->
+      <span class="absolute top-2 left-2 text-xs text-amber-400 opacity-80">🌸</span>
+      <span class="absolute top-2 right-2 text-xs text-amber-400 opacity-80">🌸</span>
+      <span class="absolute bottom-2 left-2 text-xs text-amber-400 opacity-80">🌸</span>
+      <span class="absolute bottom-2 right-2 text-xs text-amber-400 opacity-80">🌸</span>
+
+      <!-- SVG SPELPLAN -->
+      <div id="boardContainer" class="w-full h-full flex items-center justify-center">
+        <svg id="gameSvg" class="w-full h-full select-none" xmlns="http://www.w3.org/2000/svg">
+          <!-- Dynamiskt innehåll renderas via JavaScript -->
+        </svg>
+      </div>
+    </div>
+
+    <!-- SNABBMEDDELANDE / STATUSNOTIFIERING -->
+    <div id="statusToast" class="h-6 mt-1 text-center text-xs font-semibold text-amber-300 opacity-0 transition-opacity duration-300">
+      Tips: Slut cirkeln utan förgreningar!
+    </div>
+  </main>
+
+  <!-- NEDRE KONTROLLER: Verktyg & Åtgärder -->
+  <footer class="w-full max-w-md mx-auto px-4 pb-4 select-none space-y-2">
+    <!-- VERKTYGSVÄLJARE: Linje vs Kryss -->
+    <div class="grid grid-cols-2 gap-3 p-1 rounded-2xl bg-purple-950/70 border border-purple-500/30">
+      <button id="toolLineBtn" class="flex items-center justify-center space-x-2 py-2.5 rounded-xl font-bold transition text-sm bg-gradient-to-r from-amber-500 to-orange-500 text-purple-950 shadow-md">
+        <svg class="w-5 h-5 stroke-current fill-none stroke-2" viewBox="0 0 24 24">
+          <path d="M4 20L20 4M4 20H10M4 20V14" stroke-linecap="round"/>
+        </svg>
+        <span>Linje (Lazo)</span>
+      </button>
+
+      <button id="toolCrossBtn" class="flex items-center justify-center space-x-2 py-2.5 rounded-xl font-bold transition text-sm text-purple-300 hover:text-amber-200">
+        <svg class="w-5 h-5 stroke-current fill-none stroke-2 text-rose-400" viewBox="0 0 24 24">
+          <line x1="6" y1="6" x2="18" y2="18" stroke-linecap="round"/>
+          <line x1="6" y1="18" x2="18" y2="6" stroke-linecap="round"/>
+        </svg>
+        <span>Kryss (✕)</span>
+      </button>
+    </div>
+
+    <!-- SPELKNAPPAR: Ångra, Gör om, Ledtråd, Nollställ -->
+    <div class="grid grid-cols-4 gap-2">
+      <!-- Ångra -->
+      <button id="undoBtn" class="flex flex-col items-center justify-center py-2 rounded-xl bg-purple-900/40 border border-purple-500/30 hover:bg-purple-800/50 active:scale-95 transition text-amber-200 text-xs">
+        <span class="text-base">↩️</span>
+        <span class="mt-0.5">Ångra</span>
+      </button>
+
+      <!-- Gör om -->
+      <button id="redoBtn" class="flex flex-col items-center justify-center py-2 rounded-xl bg-purple-900/40 border border-purple-500/30 hover:bg-purple-800/50 active:scale-95 transition text-amber-200 text-xs">
+        <span class="text-base">↪️</span>
+        <span class="mt-0.5">Gör om</span>
+      </button>
+
+      <!-- Ledtråd -->
+      <button id="hintBtn" class="flex flex-col items-center justify-center py-2 rounded-xl bg-amber-500/20 border border-amber-500/40 hover:bg-amber-500/30 active:scale-95 transition text-amber-300 text-xs font-semibold">
+        <span class="text-base">💡</span>
+        <span class="mt-0.5">Ledtråd</span>
+      </button>
+
+      <!-- Nollställ -->
+      <button id="resetBtn" class="flex flex-col items-center justify-center py-2 rounded-xl bg-rose-950/40 border border-rose-500/30 hover:bg-rose-900/50 active:scale-95 transition text-rose-300 text-xs">
+        <span class="text-base">🔄</span>
+        <span class="mt-0.5">Rensa</span>
+      </button>
+    </div>
+
+    <!-- Navigering mellan banor -->
+    <div class="flex items-center justify-between pt-1">
+      <button id="prevLevelBtn" class="px-3 py-1.5 rounded-lg bg-purple-900/50 border border-purple-500/30 text-xs text-amber-200 hover:bg-purple-800/60 active:scale-95 transition flex items-center space-x-1">
+        <span>◀ Föregående</span>
+      </button>
+
+      <span class="text-xs text-amber-300/60 font-semibold" id="levelProgressText">
+        Klart: 0 / 500
+      </span>
+
+      <button id="nextLevelBtn" class="px-3 py-1.5 rounded-lg bg-purple-900/50 border border-purple-500/30 text-xs text-amber-200 hover:bg-purple-800/60 active:scale-95 transition flex items-center space-x-1">
+        <span>Nästa ▶</span>
+      </button>
+    </div>
+  </footer>
+
+  <!-- MODAL: BANVÄLJARE (500 BANOR) -->
+  <div id="levelsModal" class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 hidden flex items-center justify-center p-3">
+    <div class="bg-gradient-to-b from-[#2F1B47] to-[#1A0E2A] w-full max-w-lg rounded-3xl border-2 border-amber-500/50 shadow-2xl flex flex-col max-h-[88vh] overflow-hidden">
+      <!-- Modal Header -->
+      <div class="p-4 border-b border-purple-500/30 flex items-center justify-between">
+        <div class="flex items-center space-x-2">
+          <span class="text-2xl">🎉</span>
+          <div>
+            <h2 class="text-lg font-bold text-amber-300">Välj Bana (1-500)</h2>
+            <p class="text-xs text-purple-200/70">Välj en nivå eller hoppa direkt</p>
+          </div>
+        </div>
+        <button id="closeLevelsModal" class="p-2 text-purple-300 hover:text-amber-300 text-xl font-bold">✕</button>
+      </div>
+
+      <!-- Snabbhopp och Flikar -->
+      <div class="px-4 pt-3 pb-2 space-y-2 border-b border-purple-500/20">
+        <!-- Direkt inmatning -->
+        <div class="flex items-center space-x-2">
+          <input id="jumpInput" type="number" min="1" max="500" placeholder="Skriv ban-nr (1-500)..." class="flex-1 bg-purple-950/80 border border-purple-500/40 rounded-xl px-3 py-1.5 text-sm text-amber-100 placeholder-purple-400 focus:outline-none focus:border-amber-400">
+          <button id="jumpBtn" class="bg-amber-500 text-purple-950 font-bold px-4 py-1.5 rounded-xl text-sm hover:bg-amber-400 transition">Gå</button>
+        </div>
+
+        <!-- Flikar för grupper av 100 -->
+        <div class="flex space-x-1 overflow-x-auto pb-1 text-xs" id="levelTabsContainer">
+          <button data-range="1-100" class="level-tab-btn flex-shrink-0 px-2.5 py-1.5 rounded-lg bg-amber-500 text-purple-950 font-bold">1-100</button>
+          <button data-range="101-200" class="level-tab-btn flex-shrink-0 px-2.5 py-1.5 rounded-lg bg-purple-900/60 text-amber-200 hover:bg-purple-800">101-200</button>
+          <button data-range="201-300" class="level-tab-btn flex-shrink-0 px-2.5 py-1.5 rounded-lg bg-purple-900/60 text-amber-200 hover:bg-purple-800">201-300</button>
+          <button data-range="301-400" class="level-tab-btn flex-shrink-0 px-2.5 py-1.5 rounded-lg bg-purple-900/60 text-amber-200 hover:bg-purple-800">301-400</button>
+          <button data-range="401-500" class="level-tab-btn flex-shrink-0 px-2.5 py-1.5 rounded-lg bg-purple-900/60 text-amber-200 hover:bg-purple-800">401-500</button>
+        </div>
+      </div>
+
+      <!-- Rutnät med banor -->
+      <div class="flex-1 overflow-y-auto p-4">
+        <div id="levelsGrid" class="grid grid-cols-5 sm:grid-cols-6 gap-2 text-center">
+          <!-- Renderas dynamiskt -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: REGLER -->
+  <div id="rulesModal" class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-gradient-to-b from-[#2F1B47] to-[#1A0E2A] w-full max-w-md rounded-3xl border-2 border-amber-500/50 p-6 shadow-2xl space-y-4">
+      <div class="flex justify-between items-center border-b border-purple-500/30 pb-3">
+        <h3 class="text-xl font-bold text-amber-300 flex items-center space-x-2">
+          <span>🇲🇽</span>
+          <span>Hur man spelar Slitherlink</span>
+        </h3>
+        <button id="closeRulesModal" class="text-purple-300 hover:text-amber-300 font-bold text-xl">✕</button>
+      </div>
+
+      <div class="text-sm text-purple-100/90 space-y-3 leading-relaxed">
+        <p>
+          Målet är att binda ihop punkterna till en <strong>enda sluten slinga (som ett mexikanskt lasso)</strong> utan korsningar eller förgreningar!
+        </p>
+        <ul class="space-y-2 list-disc list-inside text-amber-200">
+          <li><strong>Siffrorna:</strong> Anger exakt hur många sidor runt rutan som är del av slingan (0, 1, 2 eller 3).</li>
+          <li><strong>Tomma rutor:</strong> Kan ha vilket antal linjer som helst (0 till 3).</li>
+          <li><strong>Inga korsningar:</strong> Slingan får aldrig korsa sig själv eller dela upp sig.</li>
+          <li><strong>Kryss (✕):</strong> Markera kanter där du vet att det inte kan gå någon linje.</li>
+        </ul>
+
+        <div class="bg-purple-950/70 p-3 rounded-xl border border-amber-500/20 text-xs text-amber-300">
+          💡 <strong>Fiesta-tips:</strong> Rutor med <strong>0</strong> har aldrig några linjer runt sig – sätt kryss runt dem direkt för att starta!
+        </div>
+      </div>
+
+      <button id="rulesGotItBtn" class="w-full py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-purple-950 font-bold hover:from-amber-400 hover:to-orange-400 transition shadow-lg">
+        ¡Vámonos! Jag är redo!
+      </button>
+    </div>
+  </div>
+
+  <!-- MODAL: VINST (¡VICTORIA!) -->
+  <div id="victoryModal" class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-gradient-to-b from-[#3A1B57] via-[#2A133F] to-[#190A27] w-full max-w-sm rounded-3xl border-3 border-amber-400 p-6 shadow-2xl text-center space-y-4 relative overflow-hidden">
+      <!-- Bakgrundsljus -->
+      <div class="absolute -top-12 -left-12 w-32 h-32 bg-amber-500/20 rounded-full blur-2xl pointer-events-none"></div>
+      <div class="absolute -bottom-12 -right-12 w-32 h-32 bg-rose-500/20 rounded-full blur-2xl pointer-events-none"></div>
+
+      <div class="text-5xl animate-bounce">🎊 💀 🎊</div>
+
+      <div>
+        <h2 class="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 via-amber-400 to-rose-400">
+          ¡FANTÁSTICO!
+        </h2>
+        <p id="victorySubtitle" class="text-sm text-amber-200 mt-1 font-semibold">
+          Du löste Bana 1!
+        </p>
+      </div>
+
+      <!-- Resultat & Stjärnor -->
+      <div class="bg-purple-950/80 rounded-2xl p-4 border border-amber-500/30 space-y-2">
+        <div class="text-3xl tracking-widest text-amber-300" id="victoryStars">
+          ⭐⭐⭐
+        </div>
+        <div class="flex justify-around text-xs text-purple-200 pt-1 border-t border-purple-800/40">
+          <div>
+            <div class="text-purple-400">Tid</div>
+            <div id="victoryTime" class="text-sm font-bold text-amber-300 font-mono">01:14</div>
+          </div>
+          <div>
+            <div class="text-purple-400">Svårighet</div>
+            <div id="victoryDifficulty" class="text-sm font-bold text-teal-300">Novato</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Knappar -->
+      <div class="space-y-2 pt-2">
+        <button id="victoryNextBtn" class="w-full py-3 rounded-2xl bg-gradient-to-r from-amber-400 via-orange-500 to-rose-500 text-purple-950 font-black text-base hover:brightness-110 active:scale-95 transition shadow-xl">
+          Nästa bana ➔
+        </button>
+        <button id="victoryLevelsBtn" class="w-full py-2.5 rounded-2xl bg-purple-900/60 border border-purple-500/40 text-amber-200 font-bold text-sm hover:bg-purple-800 active:scale-95 transition">
+          Välj annan bana
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- JAVASCRIPT: SPELMOTOR, LJUD & LOGIK -->
+  <script>
+    /* ==========================================================================
+       1. LJUDMOTOR (Web Audio API - Syntetiska effekter utan externa filer)
+       ========================================================================== */
+    class FiestaAudio {
+      constructor() {
+        this.ctx = null;
+        this.isMuted = localStorage.getItem('fiesta_slitherlink_muted') === 'true';
+      }
+
+      initContext() {
+        if (!this.ctx) {
+          const AudioContext = window.AudioContext || window.webkitAudioContext;
+          if (AudioContext) {
+            this.ctx = new AudioContext();
+          }
+        }
+        if (this.ctx && this.ctx.state === 'suspended') {
+          this.ctx.resume();
+        }
+      }
+
+      toggleMute() {
+        this.isMuted = !this.isMuted;
+        localStorage.setItem('fiesta_slitherlink_muted', this.isMuted);
+        return this.isMuted;
+      }
+
+      // Mexikanskt gitarrplock (Vihuela / Akustisk nylonsträng)
+      playPluck(freq = 440) {
+        if (this.isMuted) return;
+        this.initContext();
+        if (!this.ctx) return;
+
+        try {
+          const now = this.ctx.currentTime;
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          const filter = this.ctx.createBiquadFilter();
+
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(freq, now);
+
+          filter.type = 'lowpass';
+          filter.frequency.setValueAtTime(1600, now);
+          filter.frequency.exponentialRampToValueAtTime(300, now + 0.18);
+
+          gain.gain.setValueAtTime(0.3, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
+
+          osc.connect(filter);
+          filter.connect(gain);
+          gain.connect(this.ctx.destination);
+
+          osc.start(now);
+          osc.stop(now + 0.23);
+        } catch (e) {
+          console.warn(e);
+        }
+      }
+
+      // Maraca-skak / Träklapp för Kryss (✕)
+      playMaraca() {
+        if (this.isMuted) return;
+        this.initContext();
+        if (!this.ctx) return;
+
+        try {
+          const bufferSize = this.ctx.sampleRate * 0.05;
+          const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+          const data = buffer.getChannelData(0);
+          for (let i = 0; i < bufferSize; i++) {
+            data[i] = Math.random() * 2 - 1;
+          }
+
+          const noise = this.ctx.createBufferSource();
+          noise.buffer = buffer;
+
+          const filter = this.ctx.createBiquadFilter();
+          filter.type = 'bandpass';
+          filter.frequency.value = 3200;
+          filter.Q.value = 2.5;
+
+          const gain = this.ctx.createGain();
+          const now = this.ctx.currentTime;
+          gain.gain.setValueAtTime(0.2, now);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + 0.045);
+
+          noise.connect(filter);
+          filter.connect(gain);
+          gain.connect(this.ctx.destination);
+
+          noise.start(now);
+        } catch (e) {
+          console.warn(e);
+        }
+      }
+
+      // Mjuk swoosh vid ångra
+      playWhoosh() {
+        if (this.isMuted) return;
+        this.initContext();
+        if (!this.ctx) return;
+
+        try {
+          const now = this.ctx.currentTime;
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(360, now);
+          osc.frequency.exponentialRampToValueAtTime(140, now + 0.14);
+
+          gain.gain.setValueAtTime(0.18, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+
+          osc.start(now);
+          osc.stop(now + 0.16);
+        } catch (e) {
+          console.warn(e);
+        }
+      }
+
+      // Ljus klang vid ledtråd
+      playHint() {
+        if (this.isMuted) return;
+        this.initContext();
+        if (!this.ctx) return;
+
+        try {
+          const notes = [659.25, 880]; // E5, A5
+          notes.forEach((freq, idx) => {
+            const now = this.ctx.currentTime + idx * 0.08;
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(freq, now);
+
+            gain.gain.setValueAtTime(0.22, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+
+            osc.start(now);
+            osc.stop(now + 0.36);
+          });
+        } catch (e) {
+          console.warn(e);
+        }
+      }
+
+      // Mexikansk Mariachi Brass Vinstfanfar!
+      playVictoryFanfare() {
+        if (this.isMuted) return;
+        this.initContext();
+        if (!this.ctx) return;
+
+        try {
+          // Melodi: D5, D5, G5, B5, High D6 ackord
+          const melody = [
+            { f: 587.33, t: 0.00, d: 0.12 }, // D5
+            { f: 587.33, t: 0.14, d: 0.12 }, // D5
+            { f: 783.99, t: 0.28, d: 0.18 }, // G5
+            { f: 987.77, t: 0.48, d: 0.22 }, // B5
+            { f: 1174.66, t: 0.72, d: 0.70 } // D6
+          ];
+
+          melody.forEach(item => {
+            const start = this.ctx.currentTime + item.t;
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(item.f, start);
+
+            // Filter för att ge trumpet/brass karaktär
+            const filter = this.ctx.createBiquadFilter();
+            filter.type = 'lowpass';
+            filter.frequency.setValueAtTime(2800, start);
+
+            gain.gain.setValueAtTime(0.25, start);
+            gain.gain.exponentialRampToValueAtTime(0.001, start + item.d);
+
+            osc.connect(filter);
+            filter.connect(gain);
+            gain.connect(this.ctx.destination);
+
+            osc.start(start);
+            osc.stop(start + item.d + 0.05);
+          });
+        } catch (e) {
+          console.warn(e);
+        }
+      }
+    }
+
+    const audio = new FiestaAudio();
+
+    /* ==========================================================================
+       2. DETERMINISTISK BANGENERATOR (500 BANOR VIA MULBERRY32)
+       ========================================================================== */
+    function mulberry32(a) {
+      return function() {
+        let t = a += 0x6D2B79F5;
+        t = Math.imul(t ^ (t >>> 15), t | 1);
+        t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+      };
+    }
+
+    function generateLevel(levelNum) {
+      let R, C, difficultyName;
+      if (levelNum <= 150) {
+        R = 5; C = 5; difficultyName = "Novato";
+      } else if (levelNum <= 350) {
+        R = 6; C = 6; difficultyName = "Mariachi";
+      } else {
+        R = 7; C = 7; difficultyName = "Maestro Calavera";
+      }
+
+      // Seedad slumpgenerator för deterministisk bana
+      const rng = mulberry32(levelNum * 7919 + 54321);
+
+      // Skapa en garanterad enkel Jordan-kurva (enkel sluten slinga) via polyomino-gräns
+      let inside = Array.from({ length: R }, () => Array(C).fill(false));
+
+      // Starta med en central rektangel
+      const startR = 1;
+      const startC = 1;
+      const w = Math.min(C - 2, 3);
+      const h = Math.min(R - 2, 3);
+      for (let r = startR; r < startR + h; r++) {
+        for (let c = startC; c < startC + w; c++) {
+          inside[r][c] = true;
+        }
+      }
+
+      // Validera om gränsen till 'inside' är exakt 1 enkel cykel
+      function getBoundaryCycle(grid) {
+        let hEdges = [];
+        let vEdges = [];
+
+        for (let r = 0; r <= R; r++) {
+          for (let c = 0; c < C; c++) {
+            const top = (r > 0) ? grid[r - 1][c] : false;
+            const bot = (r < R) ? grid[r][c] : false;
+            if (top !== bot) hEdges.push({ r, c });
+          }
+        }
+
+        for (let r = 0; r < R; r++) {
+          for (let c = 0; c <= C; c++) {
+            const left = (c > 0) ? grid[r][c - 1] : false;
+            const right = (c < C) ? grid[r][c] : false;
+            if (left !== right) vEdges.push({ r, c });
+          }
+        }
+
+        const degree = Array.from({ length: R + 1 }, () => Array(C + 1).fill(0));
+        const adj = {};
+
+        function addAdj(r1, c1, r2, c2) {
+          degree[r1][c1]++;
+          degree[r2][c2]++;
+          const k1 = `${r1},${c1}`;
+          const k2 = `${r2},${c2}`;
+          if (!adj[k1]) adj[k1] = [];
+          if (!adj[k2]) adj[k2] = [];
+          adj[k1].push(k2);
+          adj[k2].push(k1);
+        }
+
+        for (const e of hEdges) addAdj(e.r, e.c, e.r, e.c + 1);
+        for (const e of vEdges) addAdj(e.r, e.c, e.r + 1, e.c);
+
+        let nonZeroCount = 0;
+        let startVertex = null;
+        for (let r = 0; r <= R; r++) {
+          for (let c = 0; c <= C; c++) {
+            const d = degree[r][c];
+            if (d > 0) {
+              if (d !== 2) return null; // Förgrening eller knutpunkt!
+              nonZeroCount++;
+              if (!startVertex) startVertex = `${r},${c}`;
+            }
+          }
+        }
+
+        if (nonZeroCount < 8) return null;
+
+        // Kontrollera att det är en enda sammanhängande komponent
+        const visited = new Set();
+        const queue = [startVertex];
+        visited.add(startVertex);
+
+        while (queue.length > 0) {
+          const curr = queue.shift();
+          for (const n of (adj[curr] || [])) {
+            if (!visited.has(n)) {
+              visited.add(n);
+              queue.push(n);
+            }
+          }
+        }
+
+        if (visited.size !== nonZeroCount) return null; // Flera separata öglor
+
+        return { hEdges, vEdges, edgeCount: hEdges.length + vEdges.length };
+      }
+
+      // Gör slumpmässiga modifikationer av polyominon
+      const steps = 35 + Math.floor(rng() * 30);
+      for (let s = 0; s < steps; s++) {
+        const mr = Math.floor(rng() * R);
+        const mc = Math.floor(rng() * C);
+        inside[mr][mc] = !inside[mr][mc];
+        const cycle = getBoundaryCycle(inside);
+        if (!cycle) {
+          inside[mr][mc] = !inside[mr][mc]; // Återställ om cykeln bröts
+        }
+      }
+
+      let finalCycle = getBoundaryCycle(inside);
+      if (!finalCycle) {
+        // Säker fallback
+        inside = Array.from({ length: R }, () => Array(C).fill(false));
+        for (let r = 1; r < R - 1; r++) {
+          for (let c = 1; c < C - 1; c++) {
+            inside[r][c] = true;
+          }
+        }
+        finalCycle = getBoundaryCycle(inside);
+      }
+
+      // Beräkna ledtrådssiffror för varje cell (0-3)
+      const hSet = new Set(finalCycle.hEdges.map(e => `${e.r},${e.c}`));
+      const vSet = new Set(finalCycle.vEdges.map(e => `${e.r},${e.c}`));
+      const clues = Array.from({ length: R }, () => Array(C).fill(null));
+
+      for (let r = 0; r < R; r++) {
+        for (let c = 0; c < C; c++) {
+          let count = 0;
+          if (hSet.has(`${r},${c}`)) count++;
+          if (hSet.has(`${r + 1},${c}`)) count++;
+          if (vSet.has(`${r},${c}`)) count++;
+          if (vSet.has(`${r},${c + 1}`)) count++;
+
+          // Välj vilka ledtrådar som visas för att ge lagom utmaning
+          let show = false;
+          const roll = rng();
+          if (count === 0) show = true; // 0:or visas alltid (perfekta ankarpunkter)
+          else if (count === 3 && roll < 0.72) show = true;
+          else if (count === 2 && roll < 0.52) show = true;
+          else if (count === 1 && roll < 0.48) show = true;
+
+          if (show) clues[r][c] = count;
+        }
+      }
+
+      return {
+        levelNum,
+        R,
+        C,
+        difficultyName,
+        clues,
+        solution: {
+          hSet,
+          vSet,
+          hEdges: finalCycle.hEdges,
+          vEdges: finalCycle.vEdges,
+          totalEdges: finalCycle.edgeCount
+        }
+      };
+    }
+
+    /* ==========================================================================
+       3. SPELTILLSTÅND & VARIABLER
+       ========================================================================== */
+    let currentLevelNum = parseInt(localStorage.getItem('fiesta_slitherlink_cur_level') || '1', 10);
+    let currentLevel = null;
+
+    // Kant-tillstånd: 0 = Tom, 1 = Linje, 2 = Kryss
+    let hState = [];
+    let vState = [];
+
+    // Verktyg: 'line' eller 'cross'
+    let activeTool = 'line';
+
+    // Historik för Ångra/Gör om
+    let undoStack = [];
+    let redoStack = [];
+
+    // Tidtagare
+    let timerInterval = null;
+    let secondsElapsed = 0;
+    let isGameWon = false;
+
+    // Avklarade banor (Set sparat i localStorage)
+    let completedLevels = new Set(
+      JSON.parse(localStorage.getItem('fiesta_slitherlink_completed') || '[]')
+    );
+
+    /* ==========================================================================
+       4. INITIALISERING OCH RENDERING AV BRÄDET
+       ========================================================================== */
+    function initGame() {
+      setupUIEventListeners();
+      loadLevel(currentLevelNum);
+      updateSoundButtonUI();
+    }
+
+    function loadLevel(num) {
+      if (num < 1) num = 1;
+      if (num > 500) num = 500;
+      currentLevelNum = num;
+      localStorage.setItem('fiesta_slitherlink_cur_level', currentLevelNum);
+
+      currentLevel = generateLevel(num);
+      isGameWon = false;
+      undoStack = [];
+      redoStack = [];
+
+      // Initialisera kant-matriser
+      hState = Array.from({ length: currentLevel.R + 1 }, () => Array(currentLevel.C).fill(0));
+      vState = Array.from({ length: currentLevel.R }, () => Array(currentLevel.C + 1).fill(0));
+
+      // Återställ timer
+      clearInterval(timerInterval);
+      secondsElapsed = 0;
+      updateTimerDisplay();
+      timerInterval = setInterval(() => {
+        if (!isGameWon) {
+          secondsElapsed++;
+          updateTimerDisplay();
+        }
+      }, 1000);
+
+      // Uppdatera header
+      document.getElementById('levelBadge').textContent = `Bana ${num}`;
+      document.getElementById('difficultyLabel').textContent = `${currentLevel.difficultyName} (${currentLevel.R}×${currentLevel.C})`;
+      updateLevelProgressUI();
+
+      renderBoard();
+      showToast(`¡Bienvenidos! Bana ${num} startad.`);
+    }
+
+    function updateTimerDisplay() {
+      const mins = Math.floor(secondsElapsed / 60).toString().padStart(2, '0');
+      const secs = (secondsElapsed % 60).toString().padStart(2, '0');
+      document.getElementById('timerText').textContent = `⏱️ ${mins}:${secs}`;
+    }
+
+    function updateLevelProgressUI() {
+      document.getElementById('levelProgressText').textContent = `Klart: ${completedLevels.size} / 500`;
+    }
+
+    /* RITNING AV SVG-BRÄDET */
+    function renderBoard() {
+      const svg = document.getElementById('gameSvg');
+      svg.innerHTML = '';
+
+      const R = currentLevel.R;
+      const C = currentLevel.C;
+
+      // Beräkna mått
+      const spacing = 60;
+      const margin = 26;
+      const width = C * spacing + margin * 2;
+      const height = R * spacing + margin * 2;
+
+      svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
+
+      // 1. Rendera cell-siffror & bakgrund
+      const clueCounts = calculateCellCounts();
+
+      for (let r = 0; r < R; r++) {
+        for (let c = 0; c < C; c++) {
+          const clue = currentLevel.clues[r][c];
+          const cx = margin + c * spacing + spacing / 2;
+          const cy = margin + r * spacing + spacing / 2;
+
+          if (clue !== null) {
+            const count = clueCounts[r][c];
+            let statusClass = '';
+            if (count === clue) statusClass = 'clue-satisfied';
+            else if (count > clue) statusClass = 'clue-over';
+
+            const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            text.setAttribute('x', cx);
+            text.setAttribute('y', cy + 8);
+            text.setAttribute('text-anchor', 'middle');
+            text.setAttribute('font-size', '26');
+            text.setAttribute('font-weight', '700');
+            text.setAttribute('class', `clue-badge ${statusClass}`);
+            text.setAttribute('fill', '#F5EEF8');
+            text.setAttribute('id', `clue-${r}-${c}`);
+            text.textContent = clue;
+            svg.appendChild(text);
+          }
+        }
+      }
+
+      // 2. Rendera Horisontella Kanter
+      for (let r = 0; r <= R; r++) {
+        for (let c = 0; c < C; c++) {
+          const x1 = margin + c * spacing;
+          const y1 = margin + r * spacing;
+          const x2 = x1 + spacing;
+          const y2 = y1;
+          const state = hState[r][c];
+
+          // Faint bakgrundslinje
+          const bgLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+          bgLine.setAttribute('x1', x1);
+          bgLine.setAttribute('y1', y1);
+          bgLine.setAttribute('x2', x2);
+          bgLine.setAttribute('y2', y2);
+          bgLine.setAttribute('stroke', '#4B3566');
+          bgLine.setAttribute('stroke-width', '2');
+          bgLine.setAttribute('stroke-dasharray', '2,4');
+          svg.appendChild(bgLine);
+
+          // Aktiv linje
+          if (state === 1) {
+            const activeLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            activeLine.setAttribute('x1', x1);
+            activeLine.setAttribute('y1', y1);
+            activeLine.setAttribute('x2', x2);
+            activeLine.setAttribute('y2', y2);
+            activeLine.setAttribute('class', 'slither-line-active');
+            activeLine.setAttribute('id', `hline-${r}-${c}`);
+            svg.appendChild(activeLine);
+          }
+
+          // Kryss (✕)
+          if (state === 2) {
+            const mx = (x1 + x2) / 2;
+            const my = y1;
+            renderCross(svg, mx, my);
+          }
+
+          // Pekzon (Hitbox) för mobiler (32px bred!)
+          const hitbox = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+          hitbox.setAttribute('x1', x1);
+          hitbox.setAttribute('y1', y1);
+          hitbox.setAttribute('x2', x2);
+          hitbox.setAttribute('y2', y2);
+          hitbox.setAttribute('class', 'edge-hitbox');
+          hitbox.dataset.type = 'h';
+          hitbox.dataset.r = r;
+          hitbox.dataset.c = c;
+
+          // Event listeners för både touch och klick
+          hitbox.addEventListener('click', (e) => handleEdgeClick('h', r, c, e));
+          hitbox.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+            handleEdgeRightClick('h', r, c);
+          });
+
+          svg.appendChild(hitbox);
+        }
+      }
+
+      // 3. Rendera Vertikala Kanter
+      for (let r = 0; r < R; r++) {
+        for (let c = 0; c <= C; c++) {
+          const x1 = margin + c * spacing;
+          const y1 = margin + r * spacing;
+          const x2 = x1;
+          const y2 = y1 + spacing;
+          const state = vState[r][c];
+
+          // Faint bakgrundslinje
+          const bgLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+          bgLine.setAttribute('x1', x1);
+          bgLine.setAttribute('y1', y1);
+          bgLine.setAttribute('x2', x2);
+          bgLine.setAttribute('y2', y2);
+          bgLine.setAttribute('stroke', '#4B3566');
+          bgLine.setAttribute('stroke-width', '2');
+          bgLine.setAttribute('stroke-dasharray', '2,4');
+          svg.appendChild(bgLine);
+
+          // Aktiv linje
+          if (state === 1) {
+            const activeLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            activeLine.setAttribute('x1', x1);
+            activeLine.setAttribute('y1', y1);
+            activeLine.setAttribute('x2', x2);
+            activeLine.setAttribute('y2', y2);
+            activeLine.setAttribute('class', 'slither-line-active');
+            activeLine.setAttribute('id', `vline-${r}-${c}`);
+            svg.appendChild(activeLine);
+          }
+
+          // Kryss (✕)
+          if (state === 2) {
+            const mx = x1;
+            const my = (y1 + y2) / 2;
+            renderCross(svg, mx, my);
+          }
+
+          // Pekzon (Hitbox) för mobiler
+          const hitbox = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+          hitbox.setAttribute('x1', x1);
+          hitbox.setAttribute('y1', y1);
+          hitbox.setAttribute('x2', x2);
+          hitbox.setAttribute('y2', y2);
+          hitbox.setAttribute('class', 'edge-hitbox');
+          hitbox.dataset.type = 'v';
+          hitbox.dataset.r = r;
+          hitbox.dataset.c = c;
+
+          hitbox.addEventListener('click', (e) => handleEdgeClick('v', r, c, e));
+          hitbox.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+            handleEdgeRightClick('v', r, c);
+          });
+
+          svg.appendChild(hitbox);
+        }
+      }
+
+      // 4. Rendera Rutnätets Punkter (Prickar)
+      for (let r = 0; r <= R; r++) {
+        for (let c = 0; c <= C; c++) {
+          const x = margin + c * spacing;
+          const y = margin + r * spacing;
+
+          const dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+          dot.setAttribute('cx', x);
+          dot.setAttribute('cy', y);
+          dot.setAttribute('r', '4.5');
+          dot.setAttribute('fill', '#FFE6A7');
+          dot.setAttribute('stroke', '#FF7A00');
+          dot.setAttribute('stroke-width', '1.5');
+          dot.setAttribute('pointer-events', 'none');
+          svg.appendChild(dot);
+        }
+      }
+    }
+
+    // Rita ett litet dekorativt kryss på SVG
+    function renderCross(svg, cx, cy) {
+      const s = 6;
+      const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+      g.setAttribute('stroke', '#EF476F');
+      g.setAttribute('stroke-width', '2.5');
+      g.setAttribute('stroke-linecap', 'round');
+      g.setAttribute('pointer-events', 'none');
+
+      const l1 = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      l1.setAttribute('x1', cx - s);
+      l1.setAttribute('y1', cy - s);
+      l1.setAttribute('x2', cx + s);
+      l1.setAttribute('y2', cy + s);
+
+      const l2 = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      l2.setAttribute('x1', cx - s);
+      l2.setAttribute('y1', cy + s);
+      l2.setAttribute('x2', cx + s);
+      l2.setAttribute('y2', cy - s);
+
+      g.appendChild(l1);
+      g.appendChild(l2);
+      svg.appendChild(g);
+    }
+
+    /* Beräkna aktiva linjer runt varje cell */
+    function calculateCellCounts() {
+      const R = currentLevel.R;
+      const C = currentLevel.C;
+      const counts = Array.from({ length: R }, () => Array(C).fill(0));
+
+      for (let r = 0; r < R; r++) {
+        for (let c = 0; c < C; c++) {
+          let count = 0;
+          if (hState[r][c] === 1) count++;
+          if (hState[r + 1][c] === 1) count++;
+          if (vState[r][c] === 1) count++;
+          if (vState[r][c + 1] === 1) count++;
+          counts[r][c] = count;
+        }
+      }
+      return counts;
+    }
+
+    /* ==========================================================================
+       5. INTERAKTION & DRAG-LOGIK
+       ========================================================================== */
+    function handleEdgeClick(type, r, c) {
+      if (isGameWon) return;
+
+      const currentVal = (type === 'h') ? hState[r][c] : vState[r][c];
+      let nextVal = 0;
+
+      if (activeTool === 'line') {
+        // Om linjeverktyget är valt: växla mellan Tom <-> Linje
+        nextVal = (currentVal === 1) ? 0 : 1;
+      } else {
+        // Om kryssverktyget är valt: växla mellan Tom <-> Kryss
+        nextVal = (currentVal === 2) ? 0 : 2;
+      }
+
+      applyEdgeChange(type, r, c, nextVal, true);
+
+      // Spela lämpligt ljud
+      if (nextVal === 1) {
+        // Gitarrackord i olika tonhöjder beroende på rad/kolumn
+        const notes = [329.63, 370.00, 415.30, 440.00, 493.88, 554.37, 659.25];
+        const pitch = notes[(r + c) % notes.length];
+        audio.playPluck(pitch);
+      } else if (nextVal === 2) {
+        audio.playMaraca();
+      } else {
+        audio.playWhoosh();
+      }
+    }
+
+    function handleEdgeRightClick(type, r, c) {
+      if (isGameWon) return;
+      const currentVal = (type === 'h') ? hState[r][c] : vState[r][c];
+      const nextVal = (currentVal === 2) ? 0 : 2;
+      applyEdgeChange(type, r, c, nextVal, true);
+      audio.playMaraca();
+    }
+
+    function applyEdgeChange(type, r, c, nextVal, recordHistory = true) {
+      const prevVal = (type === 'h') ? hState[r][c] : vState[r][c];
+      if (prevVal === nextVal) return;
+
+      if (recordHistory) {
+        undoStack.push({ type, r, c, prev: prevVal, next: nextVal });
+        redoStack = []; // Rensa redo vid ny åtgärd
+      }
+
+      if (type === 'h') {
+        hState[r][c] = nextVal;
+      } else {
+        vState[r][c] = nextVal;
+      }
+
+      renderBoard();
+      checkGameStatus();
+    }
+
+    /* ==========================================================================
+       6. VALIDERINGS- OCH VINSTLOGIK
+       ========================================================================== */
+    function checkGameStatus() {
+      const R = currentLevel.R;
+      const C = currentLevel.C;
+
+      // 1. Kontrollera alla sifferkrav
+      for (let r = 0; r < R; r++) {
+        for (let c = 0; c < C; c++) {
+          const clue = currentLevel.clues[r][c];
+          if (clue !== null) {
+            let count = 0;
+            if (hState[r][c] === 1) count++;
+            if (hState[r + 1][c] === 1) count++;
+            if (vState[r][c] === 1) count++;
+            if (vState[r][c + 1] === 1) count++;
+
+            if (count !== clue) {
+              return false; // Siffran stämmer inte
+            }
+          }
+        }
+      }
+
+      // 2. Beräkna hörngrad (varje hörn i slingan måste ha grad exakt 2)
+      const degree = Array.from({ length: R + 1 }, () => Array(C + 1).fill(0));
+      const adj = {};
+      let totalActiveEdges = 0;
+
+      function addLoopEdge(r1, c1, r2, c2) {
+        degree[r1][c1]++;
+        degree[r2][c2]++;
+        totalActiveEdges++;
+        const k1 = `${r1},${c1}`;
+        const k2 = `${r2},${c2}`;
+        if (!adj[k1]) adj[k1] = [];
+        if (!adj[k2]) adj[k2] = [];
+        adj[k1].push(k2);
+        adj[k2].push(k1);
+      }
+
+      for (let r = 0; r <= R; r++) {
+        for (let c = 0; c < C; c++) {
+          if (hState[r][c] === 1) addLoopEdge(r, c, r, c + 1);
+        }
+      }
+
+      for (let r = 0; r < R; r++) {
+        for (let c = 0; c <= C; c++) {
+          if (vState[r][c] === 1) addLoopEdge(r, c, r + 1, c);
+        }
+      }
+
+      if (totalActiveEdges < 4) return false;
+
+      let nonZeroCount = 0;
+      let startVertex = null;
+
+      for (let r = 0; r <= R; r++) {
+        for (let c = 0; c <= C; c++) {
+          const d = degree[r][c];
+          if (d > 0) {
+            if (d !== 2) return false; // Förgrening eller lös ände
+            nonZeroCount++;
+            if (!startVertex) startVertex = `${r},${c}`;
+          }
+        }
+      }
+
+      // 3. Kontrollera att det är exakt EN sluten cykel (inga fristående extra-öglor)
+      const visited = new Set();
+      const queue = [startVertex];
+      visited.add(startVertex);
+
+      while (queue.length > 0) {
+        const curr = queue.shift();
+        for (const neighbor of (adj[curr] || [])) {
+          if (!visited.has(neighbor)) {
+            visited.add(neighbor);
+            queue.push(neighbor);
+          }
+        }
+      }
+
+      if (visited.size !== nonZeroCount) return false;
+
+      // ALLA KRAV UPPFYLLDA: SEGER!
+      triggerVictory();
+      return true;
+    }
+
+    function triggerVictory() {
+      if (isGameWon) return;
+      isGameWon = true;
+      clearInterval(timerInterval);
+
+      // Spara klarad bana
+      completedLevels.add(currentLevelNum);
+      localStorage.setItem('fiesta_slitherlink_completed', JSON.stringify([...completedLevels]));
+      updateLevelProgressUI();
+
+      // Ljudeffekt & Konfetti
+      audio.playVictoryFanfare();
+      launchConfetti();
+
+      // Uppdatera Vinst-Modal
+      const mins = Math.floor(secondsElapsed / 60).toString().padStart(2, '0');
+      const secs = (secondsElapsed % 60).toString().padStart(2, '0');
+      document.getElementById('victorySubtitle').textContent = `Du klarade Bana ${currentLevelNum}!`;
+      document.getElementById('victoryTime').textContent = `${mins}:${secs}`;
+      document.getElementById('victoryDifficulty').textContent = currentLevel.difficultyName;
+
+      setTimeout(() => {
+        document.getElementById('victoryModal').classList.remove('hidden');
+      }, 450);
+    }
+
+    /* ==========================================================================
+       7. VERKTYG, ÅNGRA, GÖR OM, LEDTRÅD & NOLLSTÄLL
+       ========================================================================== */
+    function undo() {
+      if (undoStack.length === 0 || isGameWon) return;
+      const action = undoStack.pop();
+      redoStack.push(action);
+      applyEdgeChange(action.type, action.r, action.c, action.prev, false);
+      audio.playWhoosh();
+      showToast("Ångrade drag");
+    }
+
+    function redo() {
+      if (redoStack.length === 0 || isGameWon) return;
+      const action = redoStack.pop();
+      undoStack.push(action);
+      applyEdgeChange(action.type, action.r, action.c, action.next, false);
+      audio.playWhoosh();
+      showToast("Gjorde om drag");
+    }
+
+    function giveHint() {
+      if (isGameWon) return;
+
+      const sol = currentLevel.solution;
+      const R = currentLevel.R;
+      const C = currentLevel.C;
+
+      // 1. Kontrollera först om användaren har dragit en FELAKTIG linje
+      for (let r = 0; r <= R; r++) {
+        for (let c = 0; c < C; c++) {
+          if (hState[r][c] === 1 && !sol.hSet.has(`${r},${c}`)) {
+            flashEdge('hline', r, c, 'slither-line-error');
+            audio.playMaraca();
+            showToast("⚠️ Varning: En felaktig linje har markerats i rött!");
+            return;
+          }
+        }
+      }
+
+      for (let r = 0; r < R; r++) {
+        for (let c = 0; c <= C; c++) {
+          if (vState[r][c] === 1 && !sol.vSet.has(`${r},${c}`)) {
+            flashEdge('vline', r, c, 'slither-line-error');
+            audio.playMaraca();
+            showToast("⚠️ Varning: En felaktig linje har markerats i rött!");
+            return;
+          }
+        }
+      }
+
+      // 2. Om inga fel: Lägg till en saknad korrekt linje
+      for (const e of sol.hEdges) {
+        if (hState[e.r][e.c] !== 1) {
+          applyEdgeChange('h', e.r, e.c, 1, true);
+          flashEdge('hline', e.r, e.c, 'slither-line-hint');
+          audio.playHint();
+          showToast("¡Ándale! En ledtråd har lagts till.");
+          return;
+        }
+      }
+
+      for (const e of sol.vEdges) {
+        if (vState[e.r][e.c] !== 1) {
+          applyEdgeChange('v', e.r, e.c, 1, true);
+          flashEdge('vline', e.r, e.c, 'slither-line-hint');
+          audio.playHint();
+          showToast("¡Ándale! En ledtråd har lagts till.");
+          return;
+        }
+      }
+
+      showToast("Alla korrekta linjer är redan dragna!");
+    }
+
+    function flashEdge(prefix, r, c, className) {
+      setTimeout(() => {
+        const el = document.getElementById(`${prefix}-${r}-${c}`);
+        if (el) {
+          el.classList.add(className);
+          setTimeout(() => el.classList.remove(className), 1800);
+        }
+      }, 50);
+    }
+
+    function resetBoard() {
+      if (isGameWon) return;
+      hState = Array.from({ length: currentLevel.R + 1 }, () => Array(currentLevel.C).fill(0));
+      vState = Array.from({ length: currentLevel.R }, () => Array(currentLevel.C + 1).fill(0));
+      undoStack = [];
+      redoStack = [];
+      renderBoard();
+      audio.playWhoosh();
+      showToast("Brädet nollställt");
+    }
+
+    function showToast(msg) {
+      const toast = document.getElementById('statusToast');
+      toast.textContent = msg;
+      toast.style.opacity = '1';
+      setTimeout(() => {
+        toast.style.opacity = '0';
+      }, 2500);
+    }
+
+    /* ==========================================================================
+       8. BANVÄLJARE-MODAL (500 BANOR)
+       ========================================================================== */
+    let currentRange = '1-100';
+
+    function openLevelsModal() {
+      renderLevelsList(currentRange);
+      document.getElementById('levelsModal').classList.remove('hidden');
+    }
+
+    function renderLevelsList(range) {
+      const [start, end] = range.split('-').map(Number);
+      const grid = document.getElementById('levelsGrid');
+      grid.innerHTML = '';
+
+      for (let i = start; i <= end; i++) {
+        const isDone = completedLevels.has(i);
+        const isCur = i === currentLevelNum;
+
+        const btn = document.createElement('button');
+        btn.className = `p-2 rounded-xl text-xs font-bold transition flex flex-col items-center justify-center relative active:scale-95 ${
+          isCur
+            ? 'bg-amber-400 text-purple-950 ring-2 ring-amber-300 shadow-lg'
+            : isDone
+            ? 'bg-emerald-950/70 border border-emerald-500/50 text-emerald-300'
+            : 'bg-purple-950/60 border border-purple-500/20 text-purple-200 hover:bg-purple-800'
+        }`;
+
+        btn.innerHTML = `
+          <span>${i}</span>
+          <span class="text-[10px] mt-0.5">${isDone ? '⭐' : isCur ? '▶' : '·'}</span>
+        `;
+
+        btn.addEventListener('click', () => {
+          document.getElementById('levelsModal').classList.add('hidden');
+          loadLevel(i);
+        });
+
+        grid.appendChild(btn);
+      }
+    }
+
+    /* ==========================================================================
+       9. KONFETTIEFFEKT (PAPEL PICADO)
+       ========================================================================== */
+    let confettiAnimation = null;
+    function launchConfetti() {
+      const canvas = document.getElementById('confettiCanvas');
+      const ctx = canvas.getContext('2d');
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+
+      const colors = ['#FF2A6D', '#05D9E8', '#FFB703', '#00F5D4', '#D100D1', '#FFF'];
+      const pieces = [];
+
+      for (let i = 0; i < 90; i++) {
+        pieces.push({
+          x: Math.random() * canvas.width,
+          y: Math.random() * canvas.height - canvas.height,
+          size: Math.random() * 12 + 8,
+          color: colors[Math.floor(Math.random() * colors.length)],
+          speedY: Math.random() * 4 + 3,
+          speedX: Math.random() * 2 - 1,
+          rot: Math.random() * 360,
+          rotSpeed: Math.random() * 6 - 3
+        });
+      }
+
+      let frames = 0;
+      function loop() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        pieces.forEach(p => {
+          p.y += p.speedY;
+          p.x += Math.sin(frames * 0.05) + p.speedX;
+          p.rot += p.rotSpeed;
+
+          ctx.save();
+          ctx.translate(p.x, p.y);
+          ctx.rotate((p.rot * Math.PI) / 180);
+          ctx.fillStyle = p.color;
+          // Rektangulära papel picado-vimplar
+          ctx.fillRect(-p.size / 2, -p.size / 3, p.size, p.size * 0.7);
+          ctx.restore();
+        });
+
+        frames++;
+        if (frames < 200) {
+          confettiAnimation = requestAnimationFrame(loop);
+        } else {
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          cancelAnimationFrame(confettiAnimation);
+        }
+      }
+      cancelAnimationFrame(confettiAnimation);
+      loop();
+    }
+
+    /* ==========================================================================
+       10. UI EVENT LISTENERS
+       ========================================================================== */
+    function setupUIEventListeners() {
+      // Ljudknapp
+      document.getElementById('soundBtn').addEventListener('click', () => {
+        const isMuted = audio.toggleMute();
+        updateSoundButtonUI();
+        showToast(isMuted ? 'Ljud avstängt 🔇' : 'Ljud på 🔊');
+      });
+
+      // Verktygsväljare
+      const lineBtn = document.getElementById('toolLineBtn');
+      const crossBtn = document.getElementById('toolCrossBtn');
+
+      lineBtn.addEventListener('click', () => {
+        activeTool = 'line';
+        lineBtn.className = "flex items-center justify-center space-x-2 py-2.5 rounded-xl font-bold transition text-sm bg-gradient-to-r from-amber-500 to-orange-500 text-purple-950 shadow-md";
+        crossBtn.className = "flex items-center justify-center space-x-2 py-2.5 rounded-xl font-bold transition text-sm text-purple-300 hover:text-amber-200";
+        audio.playWhoosh();
+      });
+
+      crossBtn.addEventListener('click', () => {
+        activeTool = 'cross';
+        crossBtn.className = "flex items-center justify-center space-x-2 py-2.5 rounded-xl font-bold transition text-sm bg-gradient-to-r from-rose-500 to-pink-500 text-white shadow-md";
+        lineBtn.className = "flex items-center justify-center space-x-2 py-2.5 rounded-xl font-bold transition text-sm text-purple-300 hover:text-amber-200";
+        audio.playMaraca();
+      });
+
+      // Handlingar
+      document.getElementById('undoBtn').addEventListener('click', undo);
+      document.getElementById('redoBtn').addEventListener('click', redo);
+      document.getElementById('hintBtn').addEventListener('click', giveHint);
+      document.getElementById('resetBtn').addEventListener('click', resetBoard);
+
+      // Föregående / Nästa bana
+      document.getElementById('prevLevelBtn').addEventListener('click', () => {
+        if (currentLevelNum > 1) loadLevel(currentLevelNum - 1);
+      });
+      document.getElementById('nextLevelBtn').addEventListener('click', () => {
+        if (currentLevelNum < 500) loadLevel(currentLevelNum + 1);
+      });
+
+      // Modaler
+      document.getElementById('levelsBtn').addEventListener('click', openLevelsModal);
+      document.getElementById('closeLevelsModal').addEventListener('click', () => {
+        document.getElementById('levelsModal').classList.add('hidden');
+      });
+
+      document.getElementById('rulesBtn').addEventListener('click', () => {
+        document.getElementById('rulesModal').classList.remove('hidden');
+      });
+      document.getElementById('closeRulesModal').addEventListener('click', () => {
+        document.getElementById('rulesModal').classList.add('hidden');
+      });
+      document.getElementById('rulesGotItBtn').addEventListener('click', () => {
+        document.getElementById('rulesModal').classList.add('hidden');
+      });
+
+      // Banväljare flikar
+      const tabBtns = document.querySelectorAll('.level-tab-btn');
+      tabBtns.forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          tabBtns.forEach(b => {
+            b.className = "level-tab-btn flex-shrink-0 px-2.5 py-1.5 rounded-lg bg-purple-900/60 text-amber-200 hover:bg-purple-800";
+          });
+          e.target.className = "level-tab-btn flex-shrink-0 px-2.5 py-1.5 rounded-lg bg-amber-500 text-purple-950 font-bold";
+          currentRange = e.target.dataset.range;
+          renderLevelsList(currentRange);
+        });
+      });
+
+      // Direkthopp input
+      document.getElementById('jumpBtn').addEventListener('click', () => {
+        const val = parseInt(document.getElementById('jumpInput').value, 10);
+        if (val >= 1 && val <= 500) {
+          document.getElementById('levelsModal').classList.add('hidden');
+          loadLevel(val);
+        } else {
+          showToast("Välj en bana mellan 1 och 500");
+        }
+      });
+
+      // Vinstmodal knappar
+      document.getElementById('victoryNextBtn').addEventListener('click', () => {
+        document.getElementById('victoryModal').classList.add('hidden');
+        if (currentLevelNum < 500) {
+          loadLevel(currentLevelNum + 1);
+        } else {
+          showToast("🏆 ¡Increíble! Du har klarat alla 500 banor!");
+        }
+      });
+
+      document.getElementById('victoryLevelsBtn').addEventListener('click', () => {
+        document.getElementById('victoryModal').classList.add('hidden');
+        openLevelsModal();
+      });
+
+      // Tangentbordsstöd (Desktop)
+      window.addEventListener('keydown', (e) => {
+        if (e.key === 'z' && (e.ctrlKey || e.metaKey)) {
+          e.preventDefault();
+          undo();
+        } else if (e.key === 'y' && (e.ctrlKey || e.metaKey)) {
+          e.preventDefault();
+          redo();
+        } else if (e.key === '1') {
+          document.getElementById('toolLineBtn').click();
+        } else if (e.key === '2') {
+          document.getElementById('toolCrossBtn').click();
+        } else if (e.key.toLowerCase() === 'h') {
+          giveHint();
+        }
+      });
+
+      // Anpassa konfetti vid fönsterändring
+      window.addEventListener('resize', () => {
+        const canvas = document.getElementById('confettiCanvas');
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+      });
+    }
+
+    function updateSoundButtonUI() {
+      const icon = document.getElementById('soundIcon');
+      icon.textContent = audio.isMuted ? '🔇' : '🔊';
+    }
+
+    // Starta spelet när sidan är laddad
+    window.onload = function() {
+      initGame();
+    };
+  </script>
+</body>
+</html>

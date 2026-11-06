@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="sv" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Pastell Pusselparadis | 12 Siffer- & Logikspel</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome 6 Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts: Fredoka & Quicksand -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Quicksand:wght@500;600;700;800&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        fredoka: ['Fredoka', 'sans-serif'],
+                        quicksand: ['Quicksand', 'sans-serif'],
+                    },
+                    colors: {
+                        pastel: {
+                            pink: '#FFE5EC',
+                            pinkDark: '#F472B6',
+                            rose: '#FB7185',
+                            lavender: '#EDE9FE',
+                            lavenderDark: '#A78BFA',
+                            mint: '#DCFCE7',
+                            mintDark: '#34D399',
+                            yellow: '#FEF9C3',
+                            yellowDark: '#FBBF24',
+                            sky: '#E0F2FE',
+                            skyDark: '#38BDF8',
+                            peach: '#FFEDD5',
+                            peachDark: '#FB923C',
+                            apricot: '#FED7AA',
+                            sage: '#E2E8F0',
+                            teal: '#CCFBF1',
+                            tealDark: '#2DD4BF'
+                        }
+                    },
+                    animation: {
+                        'float-gentle': 'floatGentle 4s ease-in-out infinite',
+                        'bounce-subtle': 'bounceSubtle 2.5s ease-in-out infinite',
+                    },
+                    keyframes: {
+                        floatGentle: {
+                            '0%, 100%': { transform: 'translateY(0px) rotate(0deg)' },
+                            '50%': { transform: 'translateY(-5px) rotate(1.5deg)' },
+                        },
+                        bounceSubtle: {
+                            '0%, 100%': { transform: 'scale(1)' },
+                            '50%': { transform: 'scale(1.06)' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            font-family: 'Quicksand', sans-serif;
+            background: linear-gradient(135deg, #1E1B2E 0%, #25203B 35%, #1B2936 70%, #1A272A 100%);
+            background-attachment: fixed;
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .title-font {
+            font-family: 'Fredoka', cursive;
+        }
+
+        /* 3D-liknande pastellkort med skonsam hovring och touch-respons */
+        .pastel-card {
+            box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.35), 0 2px 6px -1px rgba(0, 0, 0, 0.2);
+            transition: all 0.16s cubic-bezier(0.34, 1.4, 0.64, 1);
+        }
+        .pastel-card:active {
+            transform: scale(0.975) translateY(2px);
+            box-shadow: 0 4px 12px -2px rgba(0, 0, 0, 0.45);
+        }
+
+        /* Flytande pastell-symboler i bakgrunden */
+        .ambient-symbol {
+            position: fixed;
+            pointer-events: none;
+            user-select: none;
+            opacity: 0.22;
+            z-index: 0;
+            animation: floatUp linear infinite;
+        }
+
+        @keyframes floatUp {
+            0% { transform: translateY(105vh) rotate(0deg) scale(0.75); opacity: 0; }
+            15% { opacity: 0.25; }
+            85% { opacity: 0.25; }
+            100% { transform: translateY(-8vh) rotate(360deg) scale(1.1); opacity: 0; }
+        }
+
+        /* Dölj rullister på flikar */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+</head>
+<body class="min-h-screen text-slate-100 flex flex-col justify-between overflow-x-hidden relative">
+
+    <!-- Flytande bakgrundsdekorationer -->
+    <div id="ambient-container" class="fixed inset-0 pointer-events-none overflow-hidden z-0"></div>
+
+    <!-- HUVUDCONTAINER -->
+    <div class="relative z-10 w-full max-w-xl mx-auto px-4 py-3 sm:py-5 flex flex-col flex-1">
+
+        <!-- HEADER / VÄLKOMSTBANNER -->
+        <header class="text-center my-1.5">
+            <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-800/80 border border-pink-400/30 text-pink-300 text-xs font-bold tracking-wide shadow-sm mb-2 backdrop-blur-md animate-float-gentle">
+                <span class="text-sm">🌸</span>
+                <span>Pastell Pusselparadis</span>
+                <span class="text-xs bg-pink-500/20 text-pink-300 border border-pink-400/30 px-2 py-0.5 rounded-full">12 Spel</span>
+            </div>
+
+            <h1 class="title-font text-3xl sm:text-4xl font-extrabold tracking-tight text-slate-100 flex items-center justify-center gap-2">
+                <span>Kluriga</span>
+                <span class="bg-gradient-to-r from-pink-400 via-purple-300 to-sky-300 bg-clip-text text-transparent">Pusselspel</span>
+                <span class="text-2xl animate-bounce-subtle">✨</span>
+            </h1>
+
+            <p class="text-slate-300 text-xs sm:text-sm font-semibold mt-1 max-w-md mx-auto">
+                Ett handplockat galleri av sifferklurigheter, mönster, logik och djuphavsnätverk i rogivande pastellfärger.
+            </p>
+
+            <!-- STATISTIK-ÖVERSIKT -->
+            <div class="grid grid-cols-3 gap-2.5 w-full mt-3 bg-slate-900/75 backdrop-blur-md border border-slate-700/80 rounded-3xl p-3 shadow-lg">
+                <div class="flex flex-col items-center justify-center py-0.5">
+                    <span class="text-lg sm:text-xl title-font font-bold text-pink-400 flex items-center gap-1">
+                        🎮 12
+                    </span>
+                    <span class="text-[11px] text-slate-400 font-bold">Unika spel</span>
+                </div>
+                <div class="flex flex-col items-center justify-center py-0.5 border-x border-slate-700/80">
+                    <span class="text-lg sm:text-xl title-font font-bold text-purple-400 flex items-center gap-1">
+                        ⭐ 3 500+
+                    </span>
+                    <span class="text-[11px] text-slate-400 font-bold">Banor totalt</span>
+                </div>
+                <div class="flex flex-col items-center justify-center py-0.5">
+                    <span class="text-lg sm:text-xl title-font font-bold text-emerald-400 flex items-center gap-1">
+                        📱 100%
+                    </span>
+                    <span class="text-[11px] text-slate-400 font-bold">Touch-optimerat</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- SÖK, SLUMP & FILTER -->
+        <section class="mt-3.5 mb-2 space-y-2">
+            <!-- Sökfält och Slumpknapp -->
+            <div class="flex items-center gap-2">
+                <div class="relative flex-1">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                    <input 
+                        type="text" 
+                        id="search-input" 
+                        placeholder="Sök spel (t.ex. 2048, Slitherlink, Binairo, Torn)..."
+                        class="w-full bg-slate-900/85 border border-slate-700/90 rounded-2xl pl-9 pr-3.5 py-2.5 text-xs sm:text-sm text-slate-100 placeholder-slate-400 focus:outline-none focus:border-pink-400 focus:ring-2 focus:ring-pink-400/20 transition shadow-sm font-medium">
+                </div>
+
+                <!-- Slumpa ett spel-knapp -->
+                <button 
+                    id="btn-random-game" 
+                    title="Överraska mig med ett slumpat spel!"
+                    class="pastel-card flex items-center gap-1.5 px-3.5 py-2.5 rounded-2xl bg-gradient-to-r from-pink-500 to-purple-500 text-white font-bold text-xs shadow-md border border-pink-400/40 active:scale-95 transition whitespace-nowrap">
+                    <span>🎲</span>
+                    <span class="hidden sm:inline">Överraska mig!</span>
+                </button>
+            </div>
+
+            <!-- Filterflikar -->
+            <div class="flex gap-1.5 overflow-x-auto pb-1 no-scrollbar text-xs font-bold">
+                <button onclick="setFilter('all')" id="filter-all" class="filter-btn px-3 py-1.5 rounded-xl bg-pink-500 text-white shadow-sm flex items-center gap-1.5 whitespace-nowrap active:scale-95 transition">
+                    <span>✨</span> Alla (12)
+                </button>
+                <button onclick="setFilter('numbers')" id="filter-numbers" class="filter-btn px-3 py-1.5 rounded-xl bg-slate-900/80 border border-slate-700/80 text-slate-300 hover:text-pink-300 whitespace-nowrap active:scale-95 transition flex items-center gap-1.5">
+                    <span>🔢</span> Siffror & Tal
+                </button>
+                <button onclick="setFilter('grid')" id="filter-grid" class="filter-btn px-3 py-1.5 rounded-xl bg-slate-900/80 border border-slate-700/80 text-slate-300 hover:text-pink-300 whitespace-nowrap active:scale-95 transition flex items-center gap-1.5">
+                    <span>🧩</span> Rutnät & Banor
+                </button>
+                <button onclick="setFilter('connect')" id="filter-connect" class="filter-btn px-3 py-1.5 rounded-xl bg-slate-900/80 border border-slate-700/80 text-slate-300 hover:text-pink-300 whitespace-nowrap active:scale-95 transition flex items-center gap-1.5">
+                    <span>🌉</span> Koppla & Broar
+                </button>
+                <button onclick="setFilter('classic')" id="filter-classic" class="filter-btn px-3 py-1.5 rounded-xl bg-slate-900/80 border border-slate-700/80 text-slate-300 hover:text-pink-300 whitespace-nowrap active:scale-95 transition flex items-center gap-1.5">
+                    <span>👑</span> Klassiker
+                </button>
+            </div>
+        </section>
+
+        <!-- SPELKORT (STORA PASTEL-KNAPPAR) -->
+        <main class="space-y-3 flex-1 my-1" id="games-container">
+
+            <!-- 1. ABYSS BRIDGES (HASHIWOKAKERO) - NYTT HÖGST UPP -->
+            <a href="Abyss Bridges - Djuphavspussel.html" class="game-card pastel-card group block bg-gradient-to-r from-[#0C1E32] via-[#10273F] to-[#0A1828] border-2 border-sky-400/40 hover:border-sky-300 rounded-3xl p-3.5 sm:p-4 relative overflow-hidden" data-category="connect numbers" data-title="abyss bridges djuphavspussel hashiwokakero broar kablar nätverk djuphav siffror öar">
+                <div class="flex items-center gap-3.5 relative z-10">
+                    <div class="w-14 h-14 sm:w-16 sm:h-16 shrink-0 rounded-2xl bg-sky-950/80 border-2 border-sky-400/50 flex flex-col items-center justify-center text-sky-300 shadow-inner group-hover:scale-105 transition-transform">
+                        <span class="text-2xl leading-none">🌊</span>
+                        <span class="title-font text-[10px] font-bold text-sky-400 mt-0.5">Broar</span>
+                    </div>
+
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center justify-between gap-1 mb-0.5">
+                            <span class="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full bg-sky-500/20 text-sky-300 border border-sky-400/30">
+                                Hashiwokakero
+                            </span>
+                            <span class="text-xs font-bold text-sky-300 flex items-center gap-1">
+                                ⚡ Djuphav
+                            </span>
+                        </div>
+                        <h2 class="title-font text-lg sm:text-xl font-bold text-sky-100 group-hover:text-sky-300 transition-colors truncate">
+                            Abyss Bridges
+                        </h2>
+                        <p class="text-xs text-sky-200/70 font-medium line-clamp-1">
+                            Anslut djuphavsstationer med 1–2 kablar enligt batysfärernas kapacitet.
+                        </p>
+                    </div>
+
+                    <div class="w-10 h-10 shrink-0 rounded-2xl bg-sky-500 text-white flex items-center justify-center shadow-md group-hover:bg-sky-400 group-hover:translate-x-1 transition-all">
+                        <i class="fa-solid fa-play text-sm"></i>
+                    </div>
+                </div>
+            </a>
+
+            <!-- 2. BINAIRO KOSMOS - NYTT HÖGST UPP -->
+            <a href="Binairo Kosmos Mobil.html" class="game-card pastel-card group block bg-gradient-to-r from-[#171433] via-[#201C46] to-[#120F2B] border-2 border-indigo-400/40 hover:border-indigo-300 rounded-3xl p-3.5 sm:p-4 relative overflow-hidden" data-category="numbers grid" data-title="binairo kosmos mobil takuzu binärt sifferpussel 500 banor sol kärna 0 1">
+                <div class="flex items-center gap-3.5 relative z-10">
+                    <div class="w-14 h-14 sm:w-16 sm:h-16 shrink-0 rounded-2xl bg-indigo-950/80 border-2 border-indigo-400/50 flex flex-col items-center justify-center text-indigo-300 shadow-inner group-hover:scale-105 transition-transform">
+                        <span class="text-2xl leading-none">🪐</span>
+                        <span class="title-font text-[10px] font-bold text-indigo-300 mt-0.5">Binairo</span>
+                    </div>
+
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center justify-between gap-1 mb-0.5">
+                            <span class="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-400/30">
+                                Takuzu / 0 & 1
+                            </span>
+                            <span class="text-xs font-bold text-indigo-300 flex items-center gap-1">
+                                🌌 500 Banor
+                            </span>
+                        </div>
+                        <h2 class="title-font text-lg sm:text-xl font-bold text-indigo-100 group-hover:text-indigo-300 transition-colors truncate">
+                            Binairo Kosmos
+                        </h2>
+                        <p class="text-xs text-indigo-200/70 font-medium line-clamp-1">
+                            Balansera kosmiska solar och kärnor (0 & 1) utan tre i rad.
+                        </p>
+                    </div>
+
+                    <div class="w-10 h-10 shrink-0 rounded-2xl bg-indigo-500 text-white flex items-center justify-center shadow-md group-hover:bg-indigo-400 group-hover:translate-x-1 transition-all">
+                        <i class="fa-solid fa-play text-sm"></i>
+                    </div>
+                </div>
+            </a>
+
+            <!-- 3. FIESTA SLITHERLINK - NYTT HÖGST UPP -->
+            <a href="Fiesta Slitherlink.html" class="game-card pastel-card group block bg-gradient-to-r from-[#2B172B] via-[#381B34] to-[#201021] border-2 border-rose-400/40 hover:border-rose-300 rounded-3xl p-3.5 sm:p-4 relative overflow-hidden" data-category="connect grid numbers" data-title="fiesta slitherlink sluten slinga lasso mexiko 500 banor logik siffror">
+                <div class="flex items-center gap-3.5 relative z-10">
+                    <div class="w-14 h-14 sm:w-16 sm:h-16 shrink-0 rounded-2xl bg-rose-950/80 border-2 border-rose-400/50 flex flex-col items-center justify-center text-rose-300 shadow-inner group-hover:scale-105 transition-transform">
+                        <span class="text-2xl leading-none">🪅</span>
+                        <span class="title-font text-[10px] font-bold text-rose-400 mt-0.5">Slitherlink</span>
+                    </div>
+
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center justify-between gap-1 mb-0.5">
+                            <span class="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-300 border border-rose-400/30">
+                                Sluten Slinga
+                            </span>
+                            <span class="text-xs font-bold text-rose-300 flex items-center gap-1">
+                                🌵 500 Banor
+                            </span>
+                        </div>
+                        <h2 class="title-font text-lg sm:text-xl font-bold text-rose-100 group-hover:text-rose-300 transition-colors truncate">
+                            Fiesta Slitherlink
+                        </h2>
+                        <p class="text-xs text-rose-200/70 font-medium line-clamp-1">
+                            Bilda ett sammanhängande lasso runt sifferledtrådarna 0–3 i mexikansk feststämning.
+                        </p>
+                    </div>
+
+                    <div class="w-10 h-10 shrink-0 rounded-2xl bg-rose-500 text-white flex items-center justify-center shadow-md group-hover:bg-rose-400 group-hover:translate-x-1 transition-all">
+                        <i class="fa-solid fa-play text-sm"></i>
+                    </div>
+                </div>
+            </a>
+
+            <!-- 4. ROYAL PEG SOLITAIRE - NYTT HÖGST UPP -->
+            <a href="Brittisk Peg Solitaire.html" class="game-card pastel-card group block bg-gradient-to-r from-[#11241B] via-[#163327] to-[#0D1C15] border-2 border-emerald-400/40 hover:border-emerald-300 rounded-3xl p-3.5 sm:p-4 relative overflow-hidden" data-category="classic numbers" data-title="royal peg solitaire brittisk peg solitaire pussel 500 banor herreman taktik kulor bräde">
+                <div class="flex items-center gap-3.5 relative z-10">
+                    <div class="w-14 h-14 sm:w-16 sm:h-16 shrink-0 rounded-2xl bg-emerald-950/80 border-2 border-emerald-400/50 flex flex-col items-center justify-center text-emerald-300 shadow-inner group-hover:scale-105 transition-transform">
+                        <span class="text-2xl leading-none">👑</span>
+                        <span class="title-font text-[10px] font-bold text-emerald-300 mt-0.5">Solitaire</span>
+                    </div>
+
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center justify-between gap-1 mb-0.5">
+                            <span class="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/30">
+                                Peg Solitaire
+                            </span>
+                            <span class="text-xs font-bold text-emerald-300 flex items-center gap-1">
+                                💎 500 Banor
+                            </span>
+                        </div>
+                        <h2 class="title-font text-lg sm:text-xl font-bold text-emerald-100 group-hover:text-emerald-300 transition-colors truncate">
+                            Royal Peg Solitaire
+                        </h2>
+                        <p class="text-xs text-emerald-200/70 font-medium line-clamp-1">
+                            Klassisk brittisk herremannasolitär – hoppa och rensa tills endast en kula återstår!
+                        </p>
+                    </div>
+
+                    <div class="w-10 h-10 shrink-0 rounded-2xl bg-emerald-500 text-white flex items-center justify-center shadow-md group-hover:bg-emerald-400 group-hover:translate-x-1 transition-all">
+                        <i class="fa-solid fa-play text-sm"></i>
+                    </div>
+                </div>
+            </a>
+
+            <!-- 5. KAWAII 2048 -->
+            <a href="Kawaii 2048.html" class="game-card pastel-card group block bg-gradient-to-r from-[#2B1B25] via-[#35212E] to-[#22151D] border-2 border-pink-400/40 hover:border-pink-300 rounded-3xl p-3.5 sm:p-4 relative overflow-hidden" data-category="numbers classic" data-title="kawaii 2048 siffersammanslagning sakura onigiri dango katt sötsaker tal">
+                <div class="flex items-center gap-3.5 relative z-10">
+                    <div class="w-14 h-14 sm:w-16 sm:h-16 shrink-0 rounded-2xl bg-pink-950/80 border-2 border-pink-400/50 flex flex-col items-center justify-center text-pink-300 shadow-inner group-hover:scale-105 transition-transform">
+                        <span class="text-2xl leading-none">🍡</span>
+                        <span class="title-font text-[10px] font-bold text-pink-300 mt-0.5">2048</span>
+                    </div>
+
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center justify-between gap-1 mb-0.5">
+                            <span class="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full bg-pink-500/20 text-pink-300 border border-pink-400/30">
+                                Sifferspel
+                            </span>
+                            <span class="text-xs font-bold text-pink-300 flex items-center gap-1">
+                                🌸 Sakura
+                            </span>
+                        </div>
+                        <h2 class="title-font text-lg sm:text-xl font-bold text-pink-100 group-hover:text-pink-300 transition-colors truncate">
+                            Kawaii 2048
+                        </h2>
+                        <p class="text-xs text-pink-200/70 font-medium line-clamp-1">
+                            Svep och slå ihop onigiri, dango och sötsaker mot målet 2048!
+                        </p>
+                    </div>
+
+                    <div class="w-10 h-10 shrink-0 rounded-2xl bg-pink-500 text-white flex items-center justify-center shadow-md group-hover:bg-pink-400 group-hover:translate-x-1 transition-all">
+                        <i class="fa-solid fa-play text-sm"></i>
+                    </div>
+                </div>
+            </a>
+
+            <!-- 6. KATTENS 15-PUSSEL -->
+            <a href="Kattens 15-Pussel.html" class="game-card pastel-card group block bg-gradient-to-r from-[#251B32] via-[#2F2140] to-[#1E1528] border-2 border-purple-400/40 hover:border-purple-300 rounded-3xl p-3.5 sm:p-4 relative overflow-hidden" data-category="numbers grid classic" data-title="kattens 15-pussel 15 pussel katt sliding tile glidande pussel siffror tal">
+                <div class="flex items-center gap-3.5 relative z-10">
+                    <div class="w-14 h-14 sm:w-16 sm:h-16 shrink-0 rounded-2xl bg-purple-950/80 border-2 border-purple-400/50 flex flex-col items-center justify-center text-purple-300 shadow-inner group-hover:scale-105 transition-transform">
+                        <span class="text-2xl leading-none">🐾</span>
+                        <span class="title-font text-[10px] font-bold text-purple-300 mt-0.5">15-Pussel</span>
+                    </div>
+
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center justify-between gap-1 mb-0.5">
+                            <span class="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-400/30">
+                                Skjutpussel
+                            </span>
+                            <span class="text-xs font-bold text-purple-300 flex items-center gap-1">
+                                🐱 Rekordjakt
+                            </span>
+                        </div>
+                        <h2 class="title-font text-lg sm:text-xl font-bold text-purple-100 group-hover:text-purple-300 transition-colors truncate">
+                            Kattens 15-Pussel
+                        </h2>
+                        <p class="text-xs text-purple-200/70 font-medium line-clamp-1">
+                            Ordna brickorna 1–15 med söta kattöron, mjau-ljudeffekter och timer.
+                        </p>
+                    </div>
+
+                    <div class="w-10 h-10 shrink-0 rounded-2xl bg-purple-500 text-white flex items-center justify-center shadow-md group-hover:bg-purple-400 group-hover:translate-x-1 transition-all">
+                        <i class="fa-solid fa-play text-sm"></i>
+                    </div>
+                </div>
+            </a>
+
+            <!-- 7. HÖSTSUDOKU -->
+            <a href="Höstsudoku.html" class="game-card pastel-card group block bg-gradient-to-r from-[#2E1E17] via-[#3B251B] to-[#251711] border-2 border-amber-400/40 hover:border-amber-300 rounded-3xl p-3.5 sm:p-4 relative overflow-hidden" data-category="numbers classic" data-title="höstsudoku sudoku siffror logik höst 9x9 rutnät tal">
+                <div class="flex items-center gap-3.5 relative z-10">
+                    <div class="w-14 h-14 sm:w-16 sm:h-16 shrink-0 rounded-2xl bg-amber-950/80 border-2 border-amber-400/50 flex flex-col items-center justify-center text-amber-300 shadow-inner group-hover:scale-105 transition-transform">
+                        <span class="text-2xl leading-none">🍂</span>
+                        <span class="title-font text-[10px] font-bold text-amber-300 mt-0.5">Sudoku</span>
+                    </div>
+
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center justify-between gap-1 mb-0.5">
+                            <span class="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-400/30">
+                                Sifferpussel
+                            </span>
+                            <span class="text-xs font-bold text-amber-300 flex items-center gap-1">
+                                3 Svårigheter
+                            </span>
+                        </div>
+                        <h2 class="title-font text-lg sm:text-xl font-bold text-amber-100 group-hover:text-amber-300 transition-colors truncate">
+                            Höstsudoku
+                        </h2>
+                        <p class="text-xs text-amber-200/70 font-medium line-clamp-1">
+                            Klassiskt 9x9 Sudoku med anteckningsläge och rogivande höstlöv.
+                        </p>
+                    </div>
+
+                    <div class="w-10 h-10 shrink-0 rounded-2xl bg-amber-500 text-white flex items-center justify-center shadow-md group-hover:bg-amber-400 group-hover:translate-x-1 transition-all">
+                        <i class="fa-solid fa-play text-sm"></i>
+                    </div>
+                </div>
+            </a>
+
+            <!-- 8. SPOOKY GRID NONOGRAM -->
+            <a href="Halloween Nonogram 50 Pussel.html" class="game-card pastel-card group block bg-gradient-to-r from-[#211633] via-[#2C1D44] to-[#1A1028] border-2 border-violet-400/40 hover:border-violet-300 rounded-3xl p-3.5 sm:p-4 relative overflow-hidden" data-category="grid classic" data-title="spooky grid halloween nonogram picross bildpussel 50 pussel siffror">
+                <div class="flex items-center gap-3.5 relative z-10">
+                    <div class="w-14 h-14 sm:w-16 sm:h-16 shrink-0 rounded-2xl bg-violet-950/80 border-2 border-violet-400/50 flex flex-col items-center justify-center text-violet-300 shadow-inner group-hover:scale-105 transition-transform">
+                        <span class="text-2xl leading-none">👻</span>
+                        <span class="title-font text-[10px] font-bold text-violet-300 mt-0.5">Picross</span>
+                    </div>
+
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center justify-between gap-1 mb-0.5">
+                            <span class="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full bg-violet-500/20 text-violet-300 border border-violet-400/30">
+                                Nonogram
+                            </span>
+                            <span class="text-xs font-bold text-violet-300 flex items-center gap-1">
+                                ⭐ 50 Pussel
+                            </span>
+                        </div>
+                        <h2 class="title-font text-lg sm:text-xl font-bold text-violet-100 group-hover:text-violet-300 transition-colors truncate">
+                            Spooky Grid Picross
+                        </h2>
+                        <p class="text-xs text-violet-200/70 font-medium line-clamp-1">
+                            Lös rad- och kolumnledtrådar för att avtäcka 50 söta pixelmönster!
+                        </p>
+                    </div>
+
+                    <div class="w-10 h-10 shrink-0 rounded-2xl bg-violet-500 text-white flex items-center justify-center shadow-md group-hover:bg-violet-400 group-hover:translate-x-1 transition-all">
+                        <i class="fa-solid fa-play text-sm"></i>
+                    </div>
+                </div>
+            </a>
+
+            <!-- 9. TOMTENS TORN (SKYSKRAPOR) -->
+            <a href="Tomtens Torn_ Juliga Skyskrapor.html" class="game-card pastel-card group block bg-gradient-to-r from-[#2E1819] via-[#3B1F20] to-[#241314] border-2 border-red-400/40 hover:border-red-300 rounded-3xl p-3.5 sm:p-4 relative overflow-hidden" data-category="numbers grid" data-title="tomtens torn juliga skyskrapor skyscrapers sifferpussel jul 500 banor logik sikt">
+                <div class="flex items-center gap-3.5 relative z-10">
+                    <div class="w-14 h-14 sm:w-16 sm:h-16 shrink-0 rounded-2xl bg-red-950/80 border-2 border-red-400/50 flex flex-col items-center justify-center text-red-300 shadow-inner group-hover:scale-105 transition-transform">
+                        <span class="text-2xl leading-none">🎅</span>
+                        <span class="title-font text-[10px] font-bold text-red-300 mt-0.5">Skyskrapor</span>
+                    </div>
+
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center justify-between gap-1 mb-0.5">
+                            <span class="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full bg-red-500/20 text-red-300 border border-red-400/30">
+                                Sikt & Logik
+                            </span>
+                            <span class="text-xs font-bold text-red-300 flex items-center gap-1">
+                                🎄 500 Banor
+                            </span>
+                        </div>
+                        <h2 class="title-font text-lg sm:text-xl font-bold text-red-100 group-hover:text-red-300 transition-colors truncate">
+                            Tomtens Torn
+                        </h2>
+                        <p class="text-xs text-red-200/70 font-medium line-clamp-1">
+                            Bygg tornen så tomten ser rätt antal från kanterna (4x4, 5x5 och 6x6).
+                        </p>
+                    </div>
+
+                    <div class="w-10 h-10 shrink-0 rounded-2xl bg-red-500 text-white flex items-center justify-center shadow-md group-hover:bg-red-400 group-hover:translate-x-1 transition-all">
+                        <i class="fa-solid fa-play text-sm"></i>
+                    </div>
+                </div>
+            </a>
+
+            <!-- 10. VÅRPUSSEL (FLOW CONNECT) -->
+            <a href="Vårpussel.html" class="game-card pastel-card group block bg-gradient-to-r from-[#142921] via-[#1A372D] to-[#10221C] border-2 border-emerald-400/40 hover:border-emerald-300 rounded-3xl p-3.5 sm:p-4 relative overflow-hidden" data-category="connect grid" data-title="vårpussel flow game numberlink koppla linjer blommor vår 500 banor">
+                <div class="flex items-center gap-3.5 relative z-10">
+                    <div class="w-14 h-14 sm:w-16 sm:h-16 shrink-0 rounded-2xl bg-emerald-950/80 border-2 border-emerald-400/50 flex flex-col items-center justify-center text-emerald-300 shadow-inner group-hover:scale-105 transition-transform">
+                        <span class="text-2xl leading-none">🌸</span>
+                        <span class="title-font text-[10px] font-bold text-emerald-300 mt-0.5">Flow</span>
+                    </div>
+
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center justify-between gap-1 mb-0.5">
+                            <span class="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/30">
+                                Koppla Linjer
+                            </span>
+                            <span class="text-xs font-bold text-emerald-300 flex items-center gap-1">
+                                🌱 500 Banor
+                            </span>
+                        </div>
+                        <h2 class="title-font text-lg sm:text-xl font-bold text-emerald-100 group-hover:text-emerald-300 transition-colors truncate">
+                            Vårpussel
+                        </h2>
+                        <p class="text-xs text-emerald-200/70 font-medium line-clamp-1">
+                            Koppla samman matchande vårtecken och fyll hela spelplanen utan att korsa.
+                        </p>
+                    </div>
+
+                    <div class="w-10 h-10 shrink-0 rounded-2xl bg-emerald-500 text-white flex items-center justify-center shadow-md group-hover:bg-emerald-400 group-hover:translate-x-1 transition-all">
+                        <i class="fa-solid fa-play text-sm"></i>
+                    </div>
+                </div>
+            </a>
+
+            <!-- 11. SOMMARORD (ORDSCRAMBLE) -->
+            <a href="Sommarord - 500 Sommarbanor.html" class="game-card pastel-card group block bg-gradient-to-r from-[#2C2415] via-[#382E1A] to-[#221C11] border-2 border-yellow-400/40 hover:border-yellow-300 rounded-3xl p-3.5 sm:p-4 relative overflow-hidden" data-category="classic" data-title="sommarord ordscramble sommar pussel ord 500 banor sol strand bokstäver">
+                <div class="flex items-center gap-3.5 relative z-10">
+                    <div class="w-14 h-14 sm:w-16 sm:h-16 shrink-0 rounded-2xl bg-yellow-950/80 border-2 border-yellow-400/50 flex flex-col items-center justify-center text-yellow-300 shadow-inner group-hover:scale-105 transition-transform">
+                        <span class="text-2xl leading-none">☀️</span>
+                        <span class="title-font text-[10px] font-bold text-yellow-300 mt-0.5">Ordpussel</span>
+                    </div>
+
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center justify-between gap-1 mb-0.5">
+                            <span class="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full bg-yellow-500/20 text-yellow-300 border border-yellow-400/30">
+                                Ordscramble
+                            </span>
+                            <span class="text-xs font-bold text-yellow-300 flex items-center gap-1">
+                                🏖️ 500 Banor
+                            </span>
+                        </div>
+                        <h2 class="title-font text-lg sm:text-xl font-bold text-yellow-100 group-hover:text-yellow-300 transition-colors truncate">
+                            Sommarord
+                        </h2>
+                        <p class="text-xs text-yellow-200/70 font-medium line-clamp-1">
+                            Bilda svenska sommarord från blandade bokstavsbrickor och samla solmynt.
+                        </p>
+                    </div>
+
+                    <div class="w-10 h-10 shrink-0 rounded-2xl bg-yellow-500 text-slate-900 flex items-center justify-center shadow-md group-hover:bg-yellow-400 group-hover:translate-x-1 transition-all font-bold">
+                        <i class="fa-solid fa-play text-sm"></i>
+                    </div>
+                </div>
+            </a>
+
+            <!-- 12. FLORA: VÄCK SKOGEN (LIGHTS-OUT) -->
+            <a href="Flora - Väck Skogen till Liv.html" class="game-card pastel-card group block bg-gradient-to-r from-[#122723] via-[#17332E] to-[#0E1E1C] border-2 border-teal-400/40 hover:border-teal-300 rounded-3xl p-3.5 sm:p-4 relative overflow-hidden" data-category="grid numbers" data-title="flora väck skogen till liv lights out växter pussel 500 banor logik blommor eko">
+                <div class="flex items-center gap-3.5 relative z-10">
+                    <div class="w-14 h-14 sm:w-16 sm:h-16 shrink-0 rounded-2xl bg-teal-950/80 border-2 border-teal-400/50 flex flex-col items-center justify-center text-teal-300 shadow-inner group-hover:scale-105 transition-transform">
+                        <span class="text-2xl leading-none">🌿</span>
+                        <span class="title-font text-[10px] font-bold text-teal-300 mt-0.5">Lights-Out</span>
+                    </div>
+
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center justify-between gap-1 mb-0.5">
+                            <span class="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full bg-teal-500/20 text-teal-300 border border-teal-400/30">
+                                Eko-pussel
+                            </span>
+                            <span class="text-xs font-bold text-teal-300 flex items-center gap-1">
+                                🌺 500 Banor
+                            </span>
+                        </div>
+                        <h2 class="title-font text-lg sm:text-xl font-bold text-teal-100 group-hover:text-teal-300 transition-colors truncate">
+                            Flora: Väck Skogen
+                        </h2>
+                        <p class="text-xs text-teal-200/70 font-medium line-clamp-1">
+                            Inspirerat av Lights-Out: Väck skogsgläntans rutor så att hela skogen blomstrar!
+                        </p>
+                    </div>
+
+                    <div class="w-10 h-10 shrink-0 rounded-2xl bg-teal-500 text-white flex items-center justify-center shadow-md group-hover:bg-teal-400 group-hover:translate-x-1 transition-all">
+                        <i class="fa-solid fa-play text-sm"></i>
+                    </div>
+                </div>
+            </a>
+
+            <!-- Meddelande om inga resultat hittas -->
+            <div id="no-results" class="hidden text-center py-10 px-4 bg-slate-900/70 border-2 border-dashed border-slate-700 rounded-3xl">
+                <span class="text-4xl">🔍</span>
+                <h3 class="title-font text-base font-bold text-slate-200 mt-2">Inga spel matchade din sökning</h3>
+                <p class="text-xs text-slate-400 mt-1">Pröva att söka på t.ex. "Broar", "Binairo", "Slitherlink", "2048" eller tryck på "Alla".</p>
+            </div>
+
+        </main>
+
+        <!-- FOOTER & INFORMATION -->
+        <footer class="mt-4 mb-2 text-center text-xs text-slate-400">
+            <p class="font-semibold text-slate-300">Pastell Pusselparadis 🌸 12 Spel • Över 3 500 Banor</p>
+            <p class="text-[11px] text-slate-400/80 mt-0.5">Skapade för smidigt spelande direkt i mobilen och på surfplattan</p>
+        </footer>
+
+    </div>
+
+    <!-- JAVASCRIPT: FLYTANDE SYMBOLER, SÖKNING, FILTER & SLUMPFUNKTION -->
+    <script>
+        // 1. Skapa flytande pastell-ikoner, tal och geometriska symboler i bakgrunden
+        function createAmbientSymbols() {
+            const container = document.getElementById('ambient-container');
+            const items = [
+                { text: '🌸', size: 20 },
+                { text: '🐾', size: 18 },
+                { text: '✨', size: 16 },
+                { text: '1',  size: 24, font: true, color: '#F472B6' },
+                { text: '2',  size: 24, font: true, color: '#A78BFA' },
+                { text: '0',  size: 22, font: true, color: '#38BDF8' },
+                { text: 'π',  size: 22, font: true, color: '#34D399' },
+                { text: '🧩', size: 20 },
+                { text: '⭐', size: 18 },
+                { text: '🍡', size: 20 },
+                { text: '🎲', size: 18 },
+                { text: '👑', size: 18 },
+                { text: '🌊', size: 18 },
+                { text: '🪅', size: 18 },
+                { text: '🌿', size: 18 }
+            ];
+
+            for (let i = 0; i < 26; i++) {
+                const el = document.createElement('div');
+                const picked = items[Math.floor(Math.random() * items.length)];
+                
+                el.className = 'ambient-symbol';
+                el.innerText = picked.text;
+                el.style.left = `${Math.random() * 94}%`;
+                el.style.fontSize = `${picked.size + Math.random() * 6}px`;
+                el.style.animationDuration = `${12 + Math.random() * 16}s`;
+                el.style.animationDelay = `${Math.random() * 10}s`;
+
+                if (picked.font) {
+                    el.style.fontFamily = "'Fredoka', cursive";
+                    el.style.fontWeight = '700';
+                    el.style.color = picked.color;
+                }
+
+                container.appendChild(el);
+            }
+        }
+
+        // 2. Filter & Sökning
+        let activeFilter = 'all';
+        const searchInput = document.getElementById('search-input');
+        const gameCards = document.querySelectorAll('.game-card');
+        const noResults = document.getElementById('no-results');
+
+        function setFilter(filter) {
+            activeFilter = filter;
+
+            const filterMap = {
+                all: document.getElementById('filter-all'),
+                numbers: document.getElementById('filter-numbers'),
+                grid: document.getElementById('filter-grid'),
+                connect: document.getElementById('filter-connect'),
+                classic: document.getElementById('filter-classic')
+            };
+
+            for (const key in filterMap) {
+                const btn = filterMap[key];
+                if (!btn) continue;
+                if (key === filter) {
+                    btn.className = 'filter-btn px-3 py-1.5 rounded-xl bg-pink-500 text-white shadow-sm flex items-center gap-1.5 whitespace-nowrap active:scale-95 transition';
+                } else {
+                    btn.className = 'filter-btn px-3 py-1.5 rounded-xl bg-slate-900/80 border border-slate-700/80 text-slate-300 hover:text-pink-300 whitespace-nowrap active:scale-95 transition flex items-center gap-1.5';
+                }
+            }
+
+            applyFiltering();
+        }
+
+        function applyFiltering() {
+            const query = searchInput.value.trim().toLowerCase();
+            let visibleCount = 0;
+
+            gameCards.forEach(card => {
+                const category = card.dataset.category || '';
+                const titleData = card.dataset.title || '';
+
+                const matchesFilter = (activeFilter === 'all') || category.includes(activeFilter);
+                const matchesSearch = query === '' || titleData.includes(query);
+
+                if (matchesFilter && matchesSearch) {
+                    card.classList.remove('hidden');
+                    visibleCount++;
+                } else {
+                    card.classList.add('hidden');
+                }
+            });
+
+            if (visibleCount === 0) {
+                noResults.classList.remove('hidden');
+            } else {
+                noResults.classList.add('hidden');
+            }
+        }
+
+        searchInput.addEventListener('input', applyFiltering);
+
+        // 3. Slumpa ett spel ("Överraska mig!")
+        const randomBtn = document.getElementById('btn-random-game');
+        randomBtn.addEventListener('click', () => {
+            if (navigator.vibrate) navigator.vibrate([20, 40, 20]);
+            
+            // Hämta synliga spel eller alla spel
+            const candidates = Array.from(gameCards).filter(c => !c.classList.contains('hidden'));
+            const pool = candidates.length > 0 ? candidates : Array.from(gameCards);
+            
+            const randomPick = pool[Math.floor(Math.random() * pool.length)];
+            
+            // Animera valet kort innan navigering
+            randomPick.classList.add('ring-4', 'ring-pink-400', 'scale-[1.02]');
+            randomPick.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            
+            setTimeout(() => {
+                window.location.href = randomPick.getAttribute('href');
+            }, 300);
+        });
+
+        // Haptisk feedback vid klick på mobiler
+        gameCards.forEach(card => {
+            card.addEventListener('click', () => {
+                if (navigator.vibrate) {
+                    navigator.vibrate(20);
+                }
+            });
+        });
+
+        window.onload = function() {
+            createAmbientSymbols();
+        };
+    </script>
+</body>
+</html>

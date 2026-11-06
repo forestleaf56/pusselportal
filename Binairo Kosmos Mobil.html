@@ -1,0 +1,1391 @@
+<!DOCTYPE html>
+<html lang="sv" class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Binairo Kosmos • Mobilutgåva</title>
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts: Orbitron & Rajdhani -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;800;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            display: ['Orbitron', 'sans-serif'],
+            mono: ['Rajdhani', 'monospace']
+          },
+          colors: {
+            space: {
+              950: '#020617',
+              900: '#070f26',
+              850: '#0c183d',
+              800: '#132454'
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    /* Fullskärmsanpassning och förhindrande av oavsiktlig zoom/scroll */
+    html, body {
+      height: 100%;
+      height: 100dvh;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background-color: #020617;
+      color: #f8fafc;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-touch-callout: none;
+      touch-action: manipulation;
+    }
+
+    /* Glassmorphism Sci-Fi paneler */
+    .glass-card {
+      background: rgba(10, 22, 54, 0.78);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(56, 189, 248, 0.22);
+      box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.7);
+    }
+
+    .glass-btn {
+      background: rgba(15, 30, 70, 0.7);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(56, 189, 248, 0.25);
+      transition: all 0.12s ease;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .glass-btn:active:not(:disabled) {
+      transform: scale(0.94);
+      background: rgba(56, 189, 248, 0.35);
+      border-color: rgba(56, 189, 248, 0.8);
+    }
+    .glass-btn:disabled {
+      opacity: 0.3;
+      pointer-events: none;
+    }
+
+    /* Rutnät & Celler */
+    #puzzle-grid {
+      touch-action: none;
+      display: grid;
+      width: 100%;
+      height: 100%;
+    }
+
+    .binairo-cell {
+      position: relative;
+      background: rgba(12, 24, 58, 0.88);
+      border: 1px solid rgba(56, 189, 248, 0.24);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background-color 0.12s ease, border-color 0.12s ease, transform 0.1s ease;
+      cursor: pointer;
+    }
+    .binairo-cell:active:not(.locked) {
+      transform: scale(0.92);
+    }
+
+    /* Låst startelement */
+    .binairo-cell.locked {
+      background: rgba(7, 14, 34, 0.94);
+      border-color: rgba(148, 163, 184, 0.25);
+      cursor: default;
+    }
+    .binairo-cell.locked::after {
+      content: '';
+      position: absolute;
+      top: 3px;
+      right: 3px;
+      width: 4px;
+      height: 4px;
+      border-radius: 50%;
+      background: rgba(148, 163, 184, 0.45);
+    }
+
+    /* Aktiv/Markerad cell (Retikel för tumknappsats) */
+    .binairo-cell.active-focus {
+      border-color: #38bdf8 !important;
+      box-shadow: 0 0 14px rgba(56, 189, 248, 0.8), inset 0 0 8px rgba(56, 189, 248, 0.5);
+      background: rgba(24, 49, 107, 0.95) !important;
+      z-index: 10;
+    }
+
+    /* Felindikator */
+    .binairo-cell.error-state {
+      border-color: #ef4444 !important;
+      background: rgba(239, 68, 68, 0.25) !important;
+      animation: cell-error-pulse 1.2s infinite;
+    }
+    @keyframes cell-error-pulse {
+      0%, 100% { box-shadow: inset 0 0 8px rgba(239, 68, 68, 0.7); }
+      50% { box-shadow: inset 0 0 16px rgba(239, 68, 68, 1), 0 0 10px rgba(239, 68, 68, 0.8); }
+    }
+
+    /* Ledtrådsanimering */
+    .binairo-cell.hint-state {
+      animation: cell-hint 1s ease-in-out 3;
+    }
+    @keyframes cell-hint {
+      0%, 100% { transform: scale(1); border-color: #c084fc; box-shadow: 0 0 8px #c084fc; }
+      50% { transform: scale(1.1); border-color: #f472b6; box-shadow: 0 0 20px #f472b6; }
+    }
+
+    /* Glow-filter */
+    .glow-sun {
+      filter: drop-shadow(0 0 6px rgba(250, 204, 21, 0.85));
+    }
+    .glow-void {
+      filter: drop-shadow(0 0 6px rgba(192, 132, 252, 0.85));
+    }
+    .glow-num0 {
+      color: #38bdf8;
+      text-shadow: 0 0 10px rgba(56, 189, 248, 0.9);
+    }
+    .glow-num1 {
+      color: #f97316;
+      text-shadow: 0 0 10px rgba(249, 115, 22, 0.9);
+    }
+  </style>
+</head>
+<body class="h-full w-full select-none flex flex-col justify-between overflow-hidden relative">
+
+  <!-- Bakgrunds-Canvas för Rymdpartiklar och Seger-Warp -->
+  <canvas id="star-canvas" class="fixed inset-0 w-full h-full pointer-events-none -z-10"></canvas>
+
+  <!-- Huvudapp-skal: Exakt 100dvh med noll scroll -->
+  <div class="h-[100dvh] max-h-[100dvh] w-full max-w-md mx-auto flex flex-col justify-between px-2.5 py-1.5 sm:py-3 box-border">
+
+    <!-- 1. KOMPAKT HUD (TOPPFÄLT) -->
+    <header class="glass-card rounded-2xl p-2 sm:p-2.5 flex flex-col gap-1.5 flex-shrink-0">
+      <div class="flex items-center justify-between">
+        <!-- Nivåväljarknapp & Nivåinfo -->
+        <button id="btn-open-levels" class="glass-btn px-2.5 py-1 rounded-xl flex items-center gap-1.5 text-cyan-300">
+          <svg class="w-4 h-4 text-cyan-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M4 6h16M4 12h16M4 18h16"/>
+          </svg>
+          <span id="hud-level-title" class="font-display font-black text-xs sm:text-sm tracking-wider">SEKTOR 1</span>
+          <span class="text-[10px] font-mono text-cyan-400/80">▼</span>
+        </button>
+
+        <!-- Timer & Drag -->
+        <div class="flex items-center gap-2 font-mono text-xs">
+          <div class="bg-space-950/80 px-2 py-0.5 rounded-lg border border-cyan-500/20 flex items-center gap-1">
+            <span class="text-cyan-400">⏱</span>
+            <span id="hud-timer" class="font-bold text-cyan-200">00:00</span>
+          </div>
+          <div class="bg-space-950/80 px-2 py-0.5 rounded-lg border border-cyan-500/20 flex items-center gap-1">
+            <span class="text-orange-400 text-[10px]">DRAG:</span>
+            <span id="hud-moves" class="font-bold text-orange-200">0</span>
+          </div>
+        </div>
+
+        <!-- Snabbinställningar: Symbolväxlare, Ljud, Regler -->
+        <div class="flex items-center gap-1">
+          <!-- Växla Symbol (Kosmisk ☀️/🟣 vs 0/1) -->
+          <button id="btn-toggle-symbols" title="Växla mellan symboler och siffror" class="glass-btn p-1.5 rounded-xl text-xs font-mono font-bold text-amber-300">
+            ☀️
+          </button>
+          <!-- Ljud Av/På -->
+          <button id="btn-toggle-sound" class="glass-btn p-1.5 rounded-xl text-cyan-300">
+            <span id="icon-sound">🔊</span>
+          </button>
+          <!-- Regler -->
+          <button id="btn-open-rules" class="glass-btn p-1.5 rounded-xl text-cyan-300">
+            ❓
+          </button>
+        </div>
+      </div>
+
+      <!-- Sektorstatus & Felvarningsband -->
+      <div class="flex items-center justify-between text-[11px] font-mono px-1">
+        <span id="hud-difficulty" class="text-cyan-300/80">Kadett (6x6)</span>
+        <span id="hud-status" class="text-slate-400 truncate max-w-[200px]">Balansera raderna</span>
+      </div>
+    </header>
+
+    <!-- 2. SPELOMRÅDE (DYNAMISK SKALNING FÖR ALLA MOBILER) -->
+    <main class="flex-1 flex flex-col items-center justify-center min-h-0 py-1">
+      <!-- Pusselbehållare med beräknad max-dimension utan scroll -->
+      <div id="board-scaler" class="relative flex items-center justify-center p-1.5 rounded-2xl glass-card">
+        <div id="puzzle-grid" class="gap-1 sm:gap-1.5">
+          <!-- Skapas dynamiskt via JS -->
+        </div>
+      </div>
+    </main>
+
+    <!-- 3. MOBIL TUM-KNAPPSATS (NEDERDEL) -->
+    <footer class="glass-card rounded-2xl p-2 sm:p-2.5 flex flex-col gap-1.5 flex-shrink-0">
+      <!-- Tumvänliga huvudknappar -->
+      <div class="grid grid-cols-5 gap-1.5">
+        <!-- 1 / Sol -->
+        <button id="btn-pad-1" class="glass-btn py-2.5 rounded-xl flex flex-col items-center justify-center bg-cyan-950/40 border-amber-400/50">
+          <span id="label-pad-1" class="text-lg leading-none">☀️</span>
+          <span class="text-[9px] font-mono text-amber-300/80 mt-0.5">Sol (1)</span>
+        </button>
+
+        <!-- 0 / Kärna -->
+        <button id="btn-pad-0" class="glass-btn py-2.5 rounded-xl flex flex-col items-center justify-center bg-cyan-950/40 border-purple-400/50">
+          <span id="label-pad-0" class="text-lg leading-none">🟣</span>
+          <span class="text-[9px] font-mono text-purple-300/80 mt-0.5">Kärna (0)</span>
+        </button>
+
+        <!-- Rensa vald ruta -->
+        <button id="btn-pad-clear" class="glass-btn py-2.5 rounded-xl flex flex-col items-center justify-center border-slate-600/50">
+          <span class="text-lg leading-none">🧹</span>
+          <span class="text-[9px] font-mono text-slate-300 mt-0.5">Rensa</span>
+        </button>
+
+        <!-- Ångra -->
+        <button id="btn-pad-undo" class="glass-btn py-2.5 rounded-xl flex flex-col items-center justify-center border-cyan-500/30" disabled>
+          <span class="text-lg leading-none text-cyan-300">↩️</span>
+          <span class="text-[9px] font-mono text-cyan-300 mt-0.5">Ångra</span>
+        </button>
+
+        <!-- Tips / Ledtråd -->
+        <button id="btn-pad-hint" class="glass-btn py-2.5 rounded-xl flex flex-col items-center justify-center border-purple-400/50 bg-purple-950/40">
+          <span class="text-lg leading-none">💡</span>
+          <span class="text-[9px] font-mono text-purple-200 mt-0.5">Tips</span>
+        </button>
+      </div>
+
+      <!-- Snabbnavigering mellan banor -->
+      <div class="flex items-center justify-between pt-0.5 font-mono text-[11px] text-slate-400">
+        <button id="btn-prev-level" class="px-2 py-0.5 rounded-lg hover:text-cyan-300">◀ Föregående</button>
+        <span id="hud-best-time">Bästa: --:--</span>
+        <button id="btn-next-level" class="px-2 py-0.5 rounded-lg hover:text-cyan-300">Nästa ▶</button>
+      </div>
+    </footer>
+
+  </div>
+
+  <!-- MODAL: NIVÅVÄLJARE (500 BANOR MED FLIKAR & PAGINERING) -->
+  <div id="modal-levels" class="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-end sm:items-center justify-center p-0 sm:p-4 hidden">
+    <div class="glass-card w-full max-w-lg h-[88vh] sm:h-[80vh] rounded-t-3xl sm:rounded-3xl p-4 flex flex-col border border-cyan-500/40">
+      
+      <!-- Modal Huvud -->
+      <div class="flex items-center justify-between pb-2 border-b border-cyan-500/20">
+        <div>
+          <h2 class="font-display font-black text-sm sm:text-base text-cyan-300">KOSMISK SEKTORKARTA</h2>
+          <p class="text-[10px] font-mono text-slate-400">500 deterministiska Binairo-sektorer</p>
+        </div>
+        <button id="btn-close-levels" class="glass-btn p-1.5 rounded-xl text-slate-400">✕</button>
+      </div>
+
+      <!-- Svårighetsflikar -->
+      <div class="grid grid-cols-3 gap-1.5 my-2 font-mono text-xs">
+        <button class="level-tab-btn px-2 py-1.5 rounded-xl border border-cyan-400/40 bg-cyan-900/40 text-cyan-200 text-center font-bold" data-tier="kadett">
+          Kadett 6x6<br><span class="text-[9px] opacity-75">1 - 150</span>
+        </button>
+        <button class="level-tab-btn px-2 py-1.5 rounded-xl border border-cyan-500/20 bg-space-950 text-slate-400 text-center" data-tier="pilot">
+          Pilot 8x8<br><span class="text-[9px] opacity-75">151 - 350</span>
+        </button>
+        <button class="level-tab-btn px-2 py-1.5 rounded-xl border border-cyan-500/20 bg-space-950 text-slate-400 text-center" data-tier="befal">
+          Befäl 10x10<br><span class="text-[9px] opacity-75">351 - 500</span>
+        </button>
+      </div>
+
+      <!-- Paginering inom vald flik (50 banor per sida) -->
+      <div class="flex items-center justify-between gap-1 mb-2">
+        <div id="page-pills-container" class="flex gap-1 overflow-x-auto py-0.5 text-xs font-mono">
+          <!-- Sidoknappar renderas i JS -->
+        </div>
+        <!-- Snabbhopp nummer -->
+        <div class="flex items-center gap-1 flex-shrink-0">
+          <input type="number" id="input-direct-jump" placeholder="#" min="1" max="500" class="w-14 px-1.5 py-1 text-xs font-mono rounded-lg bg-space-950 border border-cyan-500/30 text-cyan-300 text-center focus:outline-none">
+          <button id="btn-direct-jump" class="glass-btn px-2 py-1 rounded-lg text-xs font-mono text-cyan-300">Gå</button>
+        </div>
+      </div>
+
+      <!-- Rutnät av banor -->
+      <div id="levels-grid-content" class="flex-1 overflow-y-auto grid grid-cols-5 gap-1.5 p-1 border border-cyan-500/10 rounded-xl bg-space-950/70">
+        <!-- Renderas dynamiskt -->
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: REGLER & KOSMISKA LAGAR -->
+  <div id="modal-rules" class="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-3 hidden">
+    <div class="glass-card w-full max-w-sm max-h-[85vh] rounded-3xl p-4 overflow-y-auto border border-cyan-500/40 text-xs">
+      <div class="flex items-center justify-between pb-2 border-b border-cyan-500/20">
+        <h3 class="font-display font-black text-cyan-300 text-sm">BINAIRO REGLER</h3>
+        <button id="btn-close-rules" class="glass-btn p-1.5 rounded-xl text-slate-400">✕</button>
+      </div>
+
+      <div class="space-y-3 mt-3 font-sans text-slate-300 leading-relaxed">
+        <div class="p-2.5 rounded-xl bg-space-900/80 border border-cyan-500/20">
+          <div class="font-bold text-cyan-400 flex items-center gap-1 mb-1">
+            <span class="w-4 h-4 rounded-full bg-cyan-950 border border-cyan-400 text-center text-[10px] leading-4">1</span>
+            Max Två i Bredd
+          </div>
+          <p class="text-[11px]">
+            Högst två likadana symboler/siffror får ligga intill varandra i rad eller kolumn.
+            <span class="block text-amber-300 font-mono mt-0.5">Exempel: ☀️ ☀️ ➔ nästa MÅSTE vara 🟣</span>
+          </p>
+        </div>
+
+        <div class="p-2.5 rounded-xl bg-space-900/80 border border-cyan-500/20">
+          <div class="font-bold text-purple-400 flex items-center gap-1 mb-1">
+            <span class="w-4 h-4 rounded-full bg-purple-950 border border-purple-400 text-center text-[10px] leading-4">2</span>
+            Kosmisk Balans
+          </div>
+          <p class="text-[11px]">
+            Varje rad och kolumn har exakt lika många av varje symbol (t.ex. tre ☀️ och tre 🟣 i 6x6).
+          </p>
+        </div>
+
+        <div class="p-2.5 rounded-xl bg-space-900/80 border border-cyan-500/20">
+          <div class="font-bold text-orange-400 flex items-center gap-1 mb-1">
+            <span class="w-4 h-4 rounded-full bg-orange-950 border border-orange-400 text-center text-[10px] leading-4">3</span>
+            Unika Banor
+          </div>
+          <p class="text-[11px]">
+            Inga rader får vara helt identiska. Inga kolumner får vara helt identiska.
+          </p>
+        </div>
+
+        <div class="p-2 rounded-xl bg-cyan-950/40 border border-cyan-500/20 text-[10px] text-cyan-200 font-mono">
+          💡 Tryck direkt på en ruta för att stega, eller välj den och använd knapparna längst ner!
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: SEGER & EXPANSION -->
+  <div id="modal-victory" class="fixed inset-0 z-50 bg-black/90 backdrop-blur-lg flex items-center justify-center p-4 hidden">
+    <div class="glass-card w-full max-w-xs rounded-3xl p-5 text-center border border-cyan-400/50 shadow-2xl relative">
+      <div class="w-14 h-14 mx-auto mb-2 rounded-2xl bg-gradient-to-tr from-cyan-500 to-amber-400 flex items-center justify-center text-2xl shadow-lg shadow-cyan-500/40">
+        ✨
+      </div>
+      <h2 class="font-display font-black text-lg text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 to-amber-200">
+        SEKTOR SÄKRAD!
+      </h2>
+      <p id="victory-desc" class="text-xs font-mono text-slate-300 mt-1">Kosmisk harmoni uppnådd.</p>
+
+      <div class="flex justify-center gap-1.5 my-3 text-2xl" id="victory-stars">
+        <span>⭐</span><span>⭐</span><span>⭐</span>
+      </div>
+
+      <div class="grid grid-cols-2 gap-2 bg-space-900/80 p-2.5 rounded-2xl border border-cyan-500/20 font-mono text-xs mb-4">
+        <div>
+          <span class="text-slate-400 block text-[10px]">TID</span>
+          <span id="victory-time" class="font-bold text-cyan-300 text-sm">01:12</span>
+        </div>
+        <div>
+          <span class="text-slate-400 block text-[10px]">DRAG</span>
+          <span id="victory-moves" class="font-bold text-orange-300 text-sm">24</span>
+        </div>
+      </div>
+
+      <button id="btn-victory-next" class="glass-btn w-full py-2.5 rounded-xl font-bold font-mono text-xs text-cyan-100 bg-cyan-600/40 border-cyan-400 shadow-lg shadow-cyan-500/30">
+        NÄSTA SEKTOR ▶
+      </button>
+    </div>
+  </div>
+
+  <script>
+    /**
+     * BINAIRO KOSMOS MOBIL - SPELMOTOR & LJUD
+     */
+
+    // Haptisk feedback för mobiler
+    function triggerHaptic(type = 'light') {
+      try {
+        if (!navigator.vibrate) return;
+        if (type === 'light') navigator.vibrate(12);
+        else if (type === 'success') navigator.vibrate([15, 40, 15]);
+        else if (type === 'error') navigator.vibrate([40, 60, 40]);
+      } catch (e) {}
+    }
+
+    // 1. LJUDMOTOR (Web Audio API)
+    class SoundFX {
+      constructor() {
+        this.ctx = null;
+        this.enabled = true;
+      }
+      init() {
+        if (!this.ctx) {
+          const AudioCtx = window.AudioContext || window.webkitAudioContext;
+          if (AudioCtx) this.ctx = new AudioCtx();
+        }
+        if (this.ctx && this.ctx.state === 'suspended') {
+          this.ctx.resume();
+        }
+      }
+      play(freq, type = 'sine', duration = 0.15, slideTo = null) {
+        if (!this.enabled) return;
+        this.init();
+        if (!this.ctx) return;
+        try {
+          const t = this.ctx.currentTime;
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = type;
+          osc.frequency.setValueAtTime(freq, t);
+          if (slideTo) osc.frequency.exponentialRampToValueAtTime(slideTo, t + duration);
+          gain.gain.setValueAtTime(0.12, t);
+          gain.gain.exponentialRampToValueAtTime(0.001, t + duration);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start(t);
+          osc.stop(t + duration);
+        } catch (e) {}
+      }
+      tone1() { this.play(660, 'sine', 0.12, 880); } // 1 / Sol
+      tone0() { this.play(260, 'triangle', 0.15, 180); } // 0 / Kärna
+      clear() { this.play(350, 'sine', 0.08, 200); }
+      error() { this.play(130, 'sawtooth', 0.22, 100); }
+      hint() {
+        if (!this.enabled) return;
+        [523, 659, 783, 1046].forEach((f, i) => {
+          setTimeout(() => this.play(f, 'sine', 0.14), i * 50);
+        });
+      }
+      victory() {
+        if (!this.enabled) return;
+        [523, 659, 783, 1046, 1318].forEach((f, i) => {
+          setTimeout(() => this.play(f, 'sine', 0.35), i * 90);
+        });
+      }
+    }
+    const audio = new SoundFX();
+
+    // 2. SEEDED PRNG (Mulberry32)
+    function mulberry32(seed) {
+      return function() {
+        let t = seed += 0x6D2B79F5;
+        t = Math.imul(t ^ (t >>> 15), t | 1);
+        t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+      };
+    }
+
+    // 3. BINAIRO REGLER & BANGENERATOR (500 BANOR)
+    class BinairoGenerator {
+      constructor() {
+        this.cache = {};
+      }
+
+      // Förberäknar alla giltiga binära rader av storlek n
+      getValidRows(n) {
+        if (this.cache[n]) return this.cache[n];
+        const half = n / 2;
+        const total = 1 << n;
+        const valid = [];
+        for (let i = 0; i < total; i++) {
+          let ones = 0;
+          for (let b = 0; b < n; b++) {
+            if ((i >> b) & 1) ones++;
+          }
+          if (ones !== half) continue;
+
+          let hasTriple = false;
+          for (let b = 0; b < n - 2; b++) {
+            const b0 = (i >> b) & 1;
+            const b1 = (i >> (b + 1)) & 1;
+            const b2 = (i >> (b + 2)) & 1;
+            if (b0 === b1 && b1 === b2) { hasTriple = true; break; }
+          }
+          if (!hasTriple) {
+            const row = [];
+            for (let b = 0; b < n; b++) row.push((i >> (n - 1 - b)) & 1);
+            valid.push(row);
+          }
+        }
+        this.cache[n] = valid;
+        return valid;
+      }
+
+      // Skapar en fullständig lösning
+      createSolution(size, prng) {
+        const rows = [...this.getValidRows(size)];
+        const half = size / 2;
+
+        // Blanda
+        for (let i = rows.length - 1; i > 0; i--) {
+          const j = Math.floor(prng() * (i + 1));
+          [rows[i], rows[j]] = [rows[j], rows[i]];
+        }
+
+        const grid = [];
+        const colZeros = new Array(size).fill(0);
+        const colOnes = new Array(size).fill(0);
+
+        const backtrack = (r) => {
+          if (r === size) {
+            for (let c1 = 0; c1 < size; c1++) {
+              for (let c2 = c1 + 1; c2 < size; c2++) {
+                let match = true;
+                for (let ro = 0; ro < size; ro++) {
+                  if (grid[ro][c1] !== grid[ro][c2]) { match = false; break; }
+                }
+                if (match) return false;
+              }
+            }
+            return true;
+          }
+
+          for (const row of rows) {
+            let rowDup = false;
+            for (let p = 0; p < r; p++) {
+              if (grid[p].every((val, idx) => val === row[idx])) { rowDup = true; break; }
+            }
+            if (rowDup) continue;
+
+            let ok = true;
+            for (let c = 0; c < size; c++) {
+              const val = row[c];
+              if (val === 0 && colZeros[c] + 1 > half) { ok = false; break; }
+              if (val === 1 && colOnes[c] + 1 > half) { ok = false; break; }
+              if (r >= 2 && grid[r - 1][c] === val && grid[r - 2][c] === val) { ok = false; break; }
+            }
+            if (!ok) continue;
+
+            grid.push(row);
+            for (let c = 0; c < size; c++) {
+              if (row[c] === 0) colZeros[c]++; else colOnes[c]++;
+            }
+
+            if (backtrack(r + 1)) return true;
+
+            grid.pop();
+            for (let c = 0; c < size; c++) {
+              if (row[c] === 0) colZeros[c]--; else colOnes[c]--;
+            }
+          }
+          return false;
+        };
+
+        if (backtrack(0)) return grid;
+
+        // Fallback-matris
+        const fallback = [];
+        for (let r = 0; r < size; r++) {
+          const row = [];
+          for (let c = 0; c < size; c++) row.push((r + c) % 2 === 0 ? 0 : 1);
+          fallback.push(row);
+        }
+        return fallback;
+      }
+
+      // Logisk lösare som garanterar att banan kan lösas utan gissning
+      testLogical(board, size) {
+        const b = board.map(r => [...r]);
+        const half = size / 2;
+        let changed = true;
+
+        while (changed) {
+          changed = false;
+          // 1. Två likadana och sandwich
+          for (let r = 0; r < size; r++) {
+            for (let c = 0; c < size; c++) {
+              if (b[r][c] !== null) continue;
+              // Vågrätt
+              if (c + 2 < size && b[r][c + 1] !== null && b[r][c + 1] === b[r][c + 2]) {
+                b[r][c] = 1 - b[r][c + 1]; changed = true;
+              } else if (c - 2 >= 0 && b[r][c - 1] !== null && b[r][c - 1] === b[r][c - 2]) {
+                b[r][c] = 1 - b[r][c - 1]; changed = true;
+              } else if (c > 0 && c < size - 1 && b[r][c - 1] !== null && b[r][c - 1] === b[r][c + 1]) {
+                b[r][c] = 1 - b[r][c - 1]; changed = true;
+              }
+              // Lodrätt
+              else if (r + 2 < size && b[r + 1][c] !== null && b[r + 1][c] === b[r + 2][c]) {
+                b[r][c] = 1 - b[r + 1][c]; changed = true;
+              } else if (r - 2 >= 0 && b[r - 1][c] !== null && b[r - 1][c] === b[r - 2][c]) {
+                b[r][c] = 1 - b[r - 1][c]; changed = true;
+              } else if (r > 0 && r < size - 1 && b[r - 1][c] !== null && b[r - 1][c] === b[r + 1][c]) {
+                b[r][c] = 1 - b[r - 1][c]; changed = true;
+              }
+            }
+          }
+          // 2. Paritetskontroll
+          for (let i = 0; i < size; i++) {
+            let r0 = 0, r1 = 0;
+            for (let c = 0; c < size; c++) {
+              if (b[i][c] === 0) r0++; else if (b[i][c] === 1) r1++;
+            }
+            if (r0 === half && r1 < half) {
+              for (let c = 0; c < size; c++) { if (b[i][c] === null) { b[i][c] = 1; changed = true; } }
+            } else if (r1 === half && r0 < half) {
+              for (let c = 0; c < size; c++) { if (b[i][c] === null) { b[i][c] = 0; changed = true; } }
+            }
+
+            let c0 = 0, c1 = 0;
+            for (let r = 0; r < size; r++) {
+              if (b[r][i] === 0) c0++; else if (b[r][i] === 1) c1++;
+            }
+            if (c0 === half && c1 < half) {
+              for (let r = 0; r < size; r++) { if (b[r][i] === null) { b[r][i] = 1; changed = true; } }
+            } else if (c1 === half && c0 < half) {
+              for (let r = 0; r < size; r++) { if (b[r][i] === null) { b[r][i] = 0; changed = true; } }
+            }
+          }
+        }
+
+        for (let r = 0; r < size; r++) {
+          for (let c = 0; c < size; c++) if (b[r][c] === null) return false;
+        }
+        return true;
+      }
+
+      getLevel(num) {
+        let size = 6;
+        let removeCount = 20;
+        if (num > 350) { size = 10; removeCount = 52; }
+        else if (num > 150) { size = 8; removeCount = 34; }
+
+        const prng = mulberry32(num * 2654435761 + 1013904223);
+        const solution = this.createSolution(size, prng);
+        const board = solution.map(row => [...row]);
+
+        const coords = [];
+        for (let r = 0; r < size; r++) {
+          for (let c = 0; c < size; c++) coords.push({ r, c });
+        }
+        for (let i = coords.length - 1; i > 0; i--) {
+          const j = Math.floor(prng() * (i + 1));
+          [coords[i], coords[j]] = [coords[j], coords[i]];
+        }
+
+        let holes = 0;
+        for (const { r, c } of coords) {
+          if (holes >= removeCount) break;
+          const orig = board[r][c];
+          board[r][c] = null;
+          if (this.testLogical(board, size)) {
+            holes++;
+          } else {
+            board[r][c] = orig;
+          }
+        }
+
+        const locked = board.map(r => r.map(cell => cell !== null));
+        return { num, size, board, solution, locked };
+      }
+    }
+
+    const generator = new BinairoGenerator();
+
+    // 4. APP-TILLSTÅND
+    const State = {
+      level: 1,
+      size: 6,
+      board: [],
+      solution: [],
+      locked: [],
+      selected: { r: 0, c: 0 },
+      history: [],
+      moves: 0,
+      timer: 0,
+      timerInterval: null,
+      isVictory: false,
+      useCosmicSymbols: true, // true: ☀️/🟣, false: 1/0
+      progress: {}
+    };
+
+    function loadSavedProgress() {
+      try {
+        const p = localStorage.getItem('binairo_kosmos_save_m');
+        if (p) State.progress = JSON.parse(p);
+        const l = localStorage.getItem('binairo_kosmos_last_m');
+        if (l) State.level = Math.max(1, Math.min(500, parseInt(l, 10)));
+      } catch (e) {}
+    }
+
+    function saveProgressData() {
+      try {
+        localStorage.setItem('binairo_kosmos_save_m', JSON.stringify(State.progress));
+        localStorage.setItem('binairo_kosmos_last_m', State.level.toString());
+      } catch (e) {}
+    }
+
+    // 5. RENDERING OCH DYNAMISK SKALNING FÖR MOBILSKÄRMAR
+    function scaleBoard() {
+      const scaler = document.getElementById('board-scaler');
+      // Beräkna maxbredd och maxhöjd dynamiskt så den ryms perfekt på alla mobiler utan scroll
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+      const maxSize = Math.min(vw - 20, vh - 220, 440);
+      scaler.style.width = `${maxSize}px`;
+      scaler.style.height = `${maxSize}px`;
+    }
+
+    function renderBoardDOM() {
+      scaleBoard();
+      const grid = document.getElementById('puzzle-grid');
+      grid.innerHTML = '';
+      grid.style.gridTemplateColumns = `repeat(${State.size}, minmax(0, 1fr))`;
+
+      for (let r = 0; r < State.size; r++) {
+        for (let c = 0; c < State.size; c++) {
+          const cell = document.createElement('div');
+          cell.className = 'binairo-cell font-display font-black text-base sm:text-xl';
+          cell.dataset.r = r;
+          cell.dataset.c = c;
+
+          if (State.locked[r][c]) cell.classList.add('locked');
+          if (State.selected.r === r && State.selected.c === c) cell.classList.add('active-focus');
+
+          // Touch och klick-hantering
+          cell.addEventListener('pointerdown', (e) => {
+            e.preventDefault();
+            onCellClicked(r, c);
+          });
+
+          grid.appendChild(cell);
+        }
+      }
+      updateAllCellsView();
+      validateRulesRealtime();
+    }
+
+    function updateAllCellsView() {
+      for (let r = 0; r < State.size; r++) {
+        for (let c = 0; c < State.size; c++) {
+          updateSingleCellView(r, c);
+        }
+      }
+    }
+
+    function updateSingleCellView(r, c) {
+      const cellEl = document.querySelector(`.binairo-cell[data-r="${r}"][data-c="${c}"]`);
+      if (!cellEl) return;
+
+      const val = State.board[r][c];
+      cellEl.innerHTML = '';
+
+      if (val === 1) {
+        if (State.useCosmicSymbols) {
+          cellEl.innerHTML = '<span class="glow-sun text-lg sm:text-2xl leading-none">☀️</span>';
+        } else {
+          cellEl.innerHTML = '<span class="glow-num1 leading-none">1</span>';
+        }
+      } else if (val === 0) {
+        if (State.useCosmicSymbols) {
+          cellEl.innerHTML = '<span class="glow-void text-lg sm:text-2xl leading-none">🟣</span>';
+        } else {
+          cellEl.innerHTML = '<span class="glow-num0 leading-none">0</span>';
+        }
+      }
+    }
+
+    // 6. INTERAKTION OCH DRAGHANTERING
+    function onCellClicked(r, c) {
+      if (State.isVictory) return;
+      setSelectedCell(r, c);
+
+      // Om cellen inte är låst, stega den direkt vid tryck: Tom -> 1 -> 0 -> Tom
+      if (!State.locked[r][c]) {
+        const cur = State.board[r][c];
+        let next = null;
+        if (cur === null) next = 1;
+        else if (cur === 1) next = 0;
+        else next = null;
+
+        applyMove(r, c, next);
+      } else {
+        triggerHaptic('light');
+        showHUDStatus('Låst nod!', 'warning');
+      }
+    }
+
+    function setSelectedCell(r, c) {
+      State.selected = { r, c };
+      document.querySelectorAll('.binairo-cell').forEach(el => el.classList.remove('active-focus'));
+      const activeEl = document.querySelector(`.binairo-cell[data-r="${r}"][data-c="${c}"]`);
+      if (activeEl) activeEl.classList.add('active-focus');
+    }
+
+    function applyMove(r, c, val) {
+      if (State.locked[r][c]) return;
+      const prev = State.board[r][c];
+      if (prev === val) return;
+
+      State.history.push({ r, c, prev, val });
+      State.board[r][c] = val;
+      State.moves++;
+      document.getElementById('hud-moves').textContent = State.moves;
+      document.getElementById('btn-pad-undo').disabled = false;
+
+      // Haptik och Ljud
+      if (val === 1) { triggerHaptic('light'); audio.tone1(); }
+      else if (val === 0) { triggerHaptic('light'); audio.tone0(); }
+      else { triggerHaptic('light'); audio.clear(); }
+
+      updateSingleCellView(r, c);
+      validateRulesRealtime();
+      checkVictory();
+    }
+
+    function undoMove() {
+      if (State.history.length === 0 || State.isVictory) return;
+      const last = State.history.pop();
+      State.board[last.r][last.c] = last.prev;
+      setSelectedCell(last.r, last.c);
+      updateSingleCellView(last.r, last.c);
+      document.getElementById('btn-pad-undo').disabled = State.history.length === 0;
+      audio.clear();
+      triggerHaptic('light');
+      validateRulesRealtime();
+    }
+
+    // 7. REALTIDSVALIDERING
+    function validateRulesRealtime() {
+      const size = State.size;
+      const half = size / 2;
+      document.querySelectorAll('.binairo-cell').forEach(el => el.classList.remove('error-state'));
+
+      let errors = 0;
+
+      // Rad- och kolumnkontroll: max 2 intill varandra
+      for (let r = 0; r < size; r++) {
+        for (let c = 0; c < size; c++) {
+          const v = State.board[r][c];
+          if (v === null) continue;
+
+          // Vågrätt 3 i rad
+          if (c <= size - 3 && v === State.board[r][c + 1] && v === State.board[r][c + 2]) {
+            markError(r, c); markError(r, c + 1); markError(r, c + 2);
+            errors++;
+          }
+          // Lodrätt 3 i rad
+          if (r <= size - 3 && v === State.board[r + 1][c] && v === State.board[r + 2][c]) {
+            markError(r, c); markError(r + 1, c); markError(r + 2, c);
+            errors++;
+          }
+        }
+      }
+
+      // Paritetskontroll (för många av en sort)
+      for (let i = 0; i < size; i++) {
+        let r0 = 0, r1 = 0, c0 = 0, c1 = 0;
+        for (let j = 0; j < size; j++) {
+          if (State.board[i][j] === 0) r0++; else if (State.board[i][j] === 1) r1++;
+          if (State.board[j][i] === 0) c0++; else if (State.board[j][i] === 1) c1++;
+        }
+        if (r0 > half || r1 > half) {
+          for (let j = 0; j < size; j++) if (State.board[i][j] !== null) markError(i, j);
+          errors++;
+        }
+        if (c0 > half || c1 > half) {
+          for (let j = 0; j < size; j++) if (State.board[j][i] !== null) markError(j, i);
+          errors++;
+        }
+      }
+
+      if (errors > 0) {
+        showHUDStatus('Regelbrott upptäckt!', 'error');
+      } else {
+        showHUDStatus('Kosmisk harmoni stabil', 'ok');
+      }
+
+      return errors === 0;
+    }
+
+    function markError(r, c) {
+      const el = document.querySelector(`.binairo-cell[data-r="${r}"][data-c="${c}"]`);
+      if (el) el.classList.add('error-state');
+    }
+
+    function showHUDStatus(text, mode = 'ok') {
+      const el = document.getElementById('hud-status');
+      el.textContent = text;
+      el.className = 'text-[11px] font-mono truncate max-w-[200px] ';
+      if (mode === 'error') el.className += 'text-rose-400 font-bold';
+      else if (mode === 'warning') el.className += 'text-amber-400 font-bold';
+      else el.className += 'text-cyan-400';
+    }
+
+    // 8. KONTROLLERA SEGER
+    function checkVictory() {
+      for (let r = 0; r < State.size; r++) {
+        for (let c = 0; c < State.size; c++) {
+          if (State.board[r][c] === null) return;
+        }
+      }
+
+      if (validateRulesRealtime()) {
+        State.isVictory = true;
+        clearInterval(State.timerInterval);
+        triggerHaptic('success');
+        audio.victory();
+        triggerWarpEffect();
+
+        // Stjärnbetyg baserat på par-tid
+        const par = State.size === 6 ? 45 : (State.size === 8 ? 120 : 260);
+        let stars = 3;
+        if (State.timer > par * 2) stars = 1;
+        else if (State.timer > par * 1.3) stars = 2;
+
+        const prev = State.progress[State.level] || {};
+        State.progress[State.level] = {
+          completed: true,
+          bestTime: prev.bestTime ? Math.min(prev.bestTime, State.timer) : State.timer,
+          stars: Math.max(prev.stars || 0, stars)
+        };
+        saveProgressData();
+
+        document.getElementById('victory-time').textContent = formatSeconds(State.timer);
+        document.getElementById('victory-moves').textContent = State.moves;
+        document.getElementById('victory-desc').textContent = `Sektor ${State.level} är säkrad.`;
+
+        const starsBox = document.getElementById('victory-stars');
+        starsBox.innerHTML = '';
+        for (let i = 0; i < 3; i++) {
+          const s = document.createElement('span');
+          s.textContent = '⭐';
+          s.className = i < stars ? 'text-amber-300 scale-110' : 'opacity-25 grayscale';
+          starsBox.appendChild(s);
+        }
+
+        setTimeout(() => {
+          document.getElementById('modal-victory').classList.remove('hidden');
+        }, 500);
+      }
+    }
+
+    // 9. SMART LEDTRÅD MED LOGISK FÖRKLARING
+    function giveSmartHint() {
+      if (State.isVictory) return;
+      const size = State.size;
+      const half = size / 2;
+
+      // 1. Prioritera att påpeka befintliga fel
+      for (let r = 0; r < size; r++) {
+        for (let c = 0; c < size; c++) {
+          if (State.board[r][c] !== null && State.board[r][c] !== State.solution[r][c]) {
+            showHUDStatus(`Fel på R${r + 1}:K${c + 1}! Rätta först`, 'error');
+            setSelectedCell(r, c);
+            audio.error();
+            triggerHaptic('error');
+            return;
+          }
+        }
+      }
+
+      // 2. Hitta två i bredd eller sandwich
+      for (let r = 0; r < size; r++) {
+        for (let c = 0; c < size; c++) {
+          if (State.board[r][c] !== null) continue;
+
+          // Vågrätt block
+          if (c >= 2 && State.board[r][c - 1] !== null && State.board[r][c - 1] === State.board[r][c - 2]) {
+            revealHint(r, c, State.solution[r][c], `Regel 1: Blockera trilling i rad ${r + 1}!`);
+            return;
+          }
+          if (c <= size - 3 && State.board[r][c + 1] !== null && State.board[r][c + 1] === State.board[r][c + 2]) {
+            revealHint(r, c, State.solution[r][c], `Regel 1: Blockera trilling i rad ${r + 1}!`);
+            return;
+          }
+          if (c > 0 && c < size - 1 && State.board[r][c - 1] !== null && State.board[r][c - 1] === State.board[r][c + 1]) {
+            revealHint(r, c, State.solution[r][c], `Regel 1: Sandwich i rad ${r + 1}!`);
+            return;
+          }
+
+          // Lodrätt block
+          if (r >= 2 && State.board[r - 1][c] !== null && State.board[r - 1][c] === State.board[r - 2][c]) {
+            revealHint(r, c, State.solution[r][c], `Regel 1: Blockera trilling i kolumn ${c + 1}!`);
+            return;
+          }
+          if (r <= size - 3 && State.board[r + 1][c] !== null && State.board[r + 1][c] === State.board[r + 2][c]) {
+            revealHint(r, c, State.solution[r][c], `Regel 1: Blockera trilling i kolumn ${c + 1}!`);
+            return;
+          }
+          if (r > 0 && r < size - 1 && State.board[r - 1][c] !== null && State.board[r - 1][c] === State.board[r + 1][c]) {
+            revealHint(r, c, State.solution[r][c], `Regel 1: Sandwich i kolumn ${c + 1}!`);
+            return;
+          }
+        }
+      }
+
+      // 3. Paritet/Balans
+      for (let i = 0; i < size; i++) {
+        let r0 = 0, r1 = 0;
+        for (let c = 0; c < size; c++) {
+          if (State.board[i][c] === 0) r0++; else if (State.board[i][c] === 1) r1++;
+        }
+        if (r0 === half || r1 === half) {
+          for (let c = 0; c < size; c++) {
+            if (State.board[i][c] === null) {
+              revealHint(i, c, State.solution[i][c], `Regel 2: Rad ${i + 1} nådde maxkvot!`);
+              return;
+            }
+          }
+        }
+      }
+
+      // 4. Avslöja första bästa tomma
+      for (let r = 0; r < size; r++) {
+        for (let c = 0; c < size; c++) {
+          if (State.board[r][c] === null) {
+            revealHint(r, c, State.solution[r][c], `Kosmisk intuition på (${r + 1}, ${c + 1})`);
+            return;
+          }
+        }
+      }
+    }
+
+    function revealHint(r, c, val, msg) {
+      applyMove(r, c, val);
+      setSelectedCell(r, c);
+      showHUDStatus(msg, 'warning');
+      audio.hint();
+      const el = document.querySelector(`.binairo-cell[data-r="${r}"][data-c="${c}"]`);
+      if (el) {
+        el.classList.add('hint-state');
+        setTimeout(() => el.classList.remove('hint-state'), 2500);
+      }
+    }
+
+    // 10. BANBYGGNAD & INITIERING
+    function loadLevel(num) {
+      State.level = Math.max(1, Math.min(500, num));
+      State.isVictory = false;
+      State.history = [];
+      State.moves = 0;
+      document.getElementById('hud-moves').textContent = '0';
+      document.getElementById('btn-pad-undo').disabled = true;
+
+      const p = generator.getLevel(State.level);
+      State.size = p.size;
+      State.solution = p.solution;
+      State.locked = p.locked;
+      State.board = p.board.map(r => [...r]);
+      State.selected = { r: 0, c: 0 };
+
+      // Hitta första olåsta cell att fokusera
+      for (let r = 0; r < State.size; r++) {
+        let found = false;
+        for (let c = 0; c < State.size; c++) {
+          if (!State.locked[r][c]) {
+            State.selected = { r, c };
+            found = true;
+            break;
+          }
+        }
+        if (found) break;
+      }
+
+      // HUD Info
+      document.getElementById('hud-level-title').textContent = `SEKTOR ${State.level}`;
+      const diffEl = document.getElementById('hud-difficulty');
+      if (State.size === 6) diffEl.textContent = 'Kadett (6x6)';
+      else if (State.size === 8) diffEl.textContent = 'Pilot (8x8)';
+      else diffEl.textContent = 'Befälhavare (10x10)';
+
+      const rec = State.progress[State.level];
+      document.getElementById('hud-best-time').textContent = rec && rec.bestTime ? `Bästa: ${formatSeconds(rec.bestTime)}` : 'Bästa: --:--';
+
+      renderBoardDOM();
+      startTimer();
+      saveProgressData();
+    }
+
+    function formatSeconds(s) {
+      const m = Math.floor(s / 60).toString().padStart(2, '0');
+      const sec = (s % 60).toString().padStart(2, '0');
+      return `${m}:${sec}`;
+    }
+
+    function startTimer() {
+      clearInterval(State.timerInterval);
+      State.timer = 0;
+      document.getElementById('hud-timer').textContent = '00:00';
+      State.timerInterval = setInterval(() => {
+        if (!State.isVictory) {
+          State.timer++;
+          document.getElementById('hud-timer').textContent = formatSeconds(State.timer);
+        }
+      }, 1000);
+    }
+
+    // 11. NIVÅVÄLJARE MED PAGINERING
+    let currentTier = 'kadett';
+    let currentPage = 1;
+
+    function renderLevelsPaginator() {
+      let start = 1, end = 150;
+      if (currentTier === 'pilot') { start = 151; end = 350; }
+      else if (currentTier === 'befal') { start = 351; end = 500; }
+
+      const totalInTier = end - start + 1;
+      const perPage = 50;
+      const pagesCount = Math.ceil(totalInTier / perPage);
+
+      const pills = document.getElementById('page-pills-container');
+      pills.innerHTML = '';
+      for (let p = 1; p <= pagesCount; p++) {
+        const pStart = start + (p - 1) * perPage;
+        const pEnd = Math.min(end, pStart + perPage - 1);
+        const btn = document.createElement('button');
+        btn.className = `px-2 py-0.5 rounded-lg border flex-shrink-0 ${
+          currentPage === p ? 'bg-cyan-500/30 border-cyan-400 text-cyan-200' : 'bg-space-950 border-slate-700 text-slate-400'
+        }`;
+        btn.textContent = `${pStart}-${pEnd}`;
+        btn.addEventListener('click', () => {
+          currentPage = p;
+          renderLevelsPaginator();
+        });
+        pills.appendChild(btn);
+      }
+
+      // Rendera rutnätet för vald sida
+      const grid = document.getElementById('levels-grid-content');
+      grid.innerHTML = '';
+      const pageStart = start + (currentPage - 1) * perPage;
+      const pageEnd = Math.min(end, pageStart + perPage - 1);
+
+      for (let i = pageStart; i <= pageEnd; i++) {
+        const item = State.progress[i];
+        const isDone = item && item.completed;
+        const isCur = i === State.level;
+
+        const btn = document.createElement('button');
+        btn.className = `p-1.5 rounded-xl flex flex-col items-center justify-center font-mono border text-xs ${
+          isCur ? 'bg-cyan-500/30 border-cyan-300 text-cyan-100 ring-1 ring-cyan-400' :
+          isDone ? 'bg-space-850 border-emerald-500/40 text-emerald-300' :
+          'bg-space-950 border-slate-800 text-slate-400 hover:border-cyan-500/40'
+        }`;
+        btn.innerHTML = `
+          <span class="font-bold text-[11px]">${i}</span>
+          <span class="text-[9px] h-3">${isDone ? '⭐'.repeat(item.stars || 1) : ''}</span>
+        `;
+        btn.addEventListener('click', () => {
+          loadLevel(i);
+          document.getElementById('modal-levels').classList.add('hidden');
+        });
+        grid.appendChild(btn);
+      }
+    }
+
+    // 12. ANIMERAD RYMD & WARP EFFECT
+    const canvas = document.getElementById('star-canvas');
+    const ctx = canvas.getContext('2d');
+    let starsArr = [];
+    let isWarping = false;
+    let warpFactor = 1;
+
+    function resizeSpace() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+      starsArr = [];
+      const count = Math.floor((canvas.width * canvas.height) / 5000);
+      for (let i = 0; i < count; i++) {
+        starsArr.push({
+          x: Math.random() * canvas.width,
+          y: Math.random() * canvas.height,
+          size: Math.random() * 1.4 + 0.3,
+          color: Math.random() > 0.5 ? '#38bdf8' : (Math.random() > 0.3 ? '#f59e0b' : '#ffffff'),
+          alpha: Math.random() * 0.7 + 0.3,
+          speed: Math.random() * 0.25 + 0.05
+        });
+      }
+      scaleBoard();
+    }
+
+    function renderSpace() {
+      ctx.fillStyle = '#020617';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      const cx = canvas.width / 2;
+      const cy = canvas.height / 2;
+
+      starsArr.forEach(s => {
+        if (isWarping) {
+          const dx = s.x - cx;
+          const dy = s.y - cy;
+          const angle = Math.atan2(dy, dx);
+          const len = warpFactor * 8;
+          ctx.strokeStyle = s.color;
+          ctx.lineWidth = s.size;
+          ctx.beginPath();
+          ctx.moveTo(s.x, s.y);
+          ctx.lineTo(s.x + Math.cos(angle) * len, s.y + Math.sin(angle) * len);
+          ctx.stroke();
+          s.x += Math.cos(angle) * warpFactor * 3;
+          s.y += Math.sin(angle) * warpFactor * 3;
+          if (s.x < 0 || s.x > canvas.width || s.y < 0 || s.y > canvas.height) {
+            s.x = cx + (Math.random() - 0.5) * 60;
+            s.y = cy + (Math.random() - 0.5) * 60;
+          }
+        } else {
+          ctx.fillStyle = s.color;
+          ctx.globalAlpha = s.alpha;
+          ctx.beginPath();
+          ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.globalAlpha = 1;
+          s.y -= s.speed;
+          if (s.y < 0) { s.y = canvas.height; s.x = Math.random() * canvas.width; }
+        }
+      });
+      requestAnimationFrame(renderSpace);
+    }
+
+    function triggerWarpEffect() {
+      isWarping = true;
+      warpFactor = 1;
+      let expand = true;
+      const timer = setInterval(() => {
+        if (expand) {
+          warpFactor += 0.8;
+          if (warpFactor >= 6) expand = false;
+        } else {
+          warpFactor -= 0.5;
+          if (warpFactor <= 1) {
+            clearInterval(timer);
+            isWarping = false;
+            resizeSpace();
+          }
+        }
+      }, 50);
+    }
+
+    // 13. KOPPLING AV KNAPPAR OCH HÄNDELSER
+    function setupMobileControls() {
+      // Tum-knappsats: 1 / Sol
+      document.getElementById('btn-pad-1').addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        applyMove(State.selected.r, State.selected.c, 1);
+      });
+
+      // Tum-knappsats: 0 / Kärna
+      document.getElementById('btn-pad-0').addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        applyMove(State.selected.r, State.selected.c, 0);
+      });
+
+      // Tum-knappsats: Rensa
+      document.getElementById('btn-pad-clear').addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        applyMove(State.selected.r, State.selected.c, null);
+      });
+
+      // Tum-knappsats: Ångra
+      document.getElementById('btn-pad-undo').addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        undoMove();
+      });
+
+      // Tum-knappsats: Tips
+      document.getElementById('btn-pad-hint').addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        giveSmartHint();
+      });
+
+      // Föregående & Nästa
+      document.getElementById('btn-prev-level').addEventListener('click', () => {
+        if (State.level > 1) loadLevel(State.level - 1);
+      });
+      document.getElementById('btn-next-level').addEventListener('click', () => {
+        if (State.level < 500) loadLevel(State.level + 1);
+      });
+
+      // Växla Kosmiska Symboler / Siffror
+      document.getElementById('btn-toggle-symbols').addEventListener('click', () => {
+        State.useCosmicSymbols = !State.useCosmicSymbols;
+        document.getElementById('btn-toggle-symbols').textContent = State.useCosmicSymbols ? '☀️' : '01';
+        document.getElementById('label-pad-1').textContent = State.useCosmicSymbols ? '☀️' : '1';
+        document.getElementById('label-pad-0').textContent = State.useCosmicSymbols ? '🟣' : '0';
+        updateAllCellsView();
+        triggerHaptic('light');
+      });
+
+      // Växla Ljud
+      document.getElementById('btn-toggle-sound').addEventListener('click', () => {
+        audio.enabled = !audio.enabled;
+        document.getElementById('icon-sound').textContent = audio.enabled ? '🔊' : '🔇';
+        if (audio.enabled) audio.tone1();
+      });
+
+      // Nivåväljar-modal
+      document.getElementById('btn-open-levels').addEventListener('click', () => {
+        // Välj automatiskt flik baserat på aktuell bana
+        if (State.level <= 150) currentTier = 'kadett';
+        else if (State.level <= 350) currentTier = 'pilot';
+        else currentTier = 'befal';
+
+        const tierStart = currentTier === 'kadett' ? 1 : (currentTier === 'pilot' ? 151 : 351);
+        currentPage = Math.floor((State.level - tierStart) / 50) + 1;
+
+        updateTierTabStyles();
+        renderLevelsPaginator();
+        document.getElementById('modal-levels').classList.remove('hidden');
+      });
+      document.getElementById('btn-close-levels').addEventListener('click', () => {
+        document.getElementById('modal-levels').classList.add('hidden');
+      });
+
+      // Flikväljare i Nivåmodal
+      document.querySelectorAll('.level-tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          currentTier = btn.dataset.tier;
+          currentPage = 1;
+          updateTierTabStyles();
+          renderLevelsPaginator();
+        });
+      });
+
+      function updateTierTabStyles() {
+        document.querySelectorAll('.level-tab-btn').forEach(b => {
+          if (b.dataset.tier === currentTier) {
+            b.className = 'level-tab-btn px-2 py-1.5 rounded-xl border border-cyan-400/40 bg-cyan-900/40 text-cyan-200 text-center font-bold';
+          } else {
+            b.className = 'level-tab-btn px-2 py-1.5 rounded-xl border border-cyan-500/20 bg-space-950 text-slate-400 text-center';
+          }
+        });
+      }
+
+      // Snabbhopp
+      document.getElementById('btn-direct-jump').addEventListener('click', () => {
+        const val = parseInt(document.getElementById('input-direct-jump').value, 10);
+        if (val >= 1 && val <= 500) {
+          loadLevel(val);
+          document.getElementById('modal-levels').classList.add('hidden');
+        }
+      });
+
+      // Regler-modal
+      document.getElementById('btn-open-rules').addEventListener('click', () => {
+        document.getElementById('modal-rules').classList.remove('hidden');
+      });
+      document.getElementById('btn-close-rules').addEventListener('click', () => {
+        document.getElementById('modal-rules').classList.add('hidden');
+      });
+
+      // Seger-knapp
+      document.getElementById('btn-victory-next').addEventListener('click', () => {
+        document.getElementById('modal-victory').classList.add('hidden');
+        if (State.level < 500) loadLevel(State.level + 1);
+      });
+
+      window.addEventListener('resize', () => {
+        resizeSpace();
+        scaleBoard();
+      });
+    }
+
+    // 14. STARTA
+    window.onload = function() {
+      loadSavedProgress();
+      resizeSpace();
+      setupMobileControls();
+      loadLevel(State.level);
+      renderSpace();
+    };
+  </script>
+</body>
+</html>
